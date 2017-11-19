@@ -1,0 +1,17 @@
+*~
+*.pyc
+
+# ignore cache
+__pycache__
+.cache/
+
+# ignore eclipse files
+.project
+.pydevproject
+.settings
+
+# ignore build files
+build/
+dist/
+pykrakenapi.egg-info/
+
