@@ -79,7 +79,7 @@ Bug Reports
 -----------
 
 To search for bugs or report them, please use the bug tracker:
-https://github.com/pykrakenapi/pykrakenapi/issues
+https://github.com/dominiktraxl/pykrakenapi/issues
 
 
 Licence
