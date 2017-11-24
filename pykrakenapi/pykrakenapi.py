@@ -67,16 +67,22 @@ def callratelimiter(query_type):
                 self.api_counter += incr
                 return result
 
-            # block if limit exceeded
+            # raise error if limit exceeded
             else:
-                print('api count limit exceeded, counter=', self.api_counter)
-                return
+                msg = ("call rate limiter exceeded (counter={}, limit={})")
+                msg = msg.format(str(self.api_counter).zfill(2),
+                                 str(self.limit).zfill(2))
+                raise CallRateLimitError(msg)
 
         return wrapper
     return decorate_func
 
 
 class KrakenAPIError(Exception):
+    pass
+
+
+class CallRateLimitError(Exception):
     pass
 
 
@@ -95,10 +101,11 @@ class KrakenAPI(object):
         An instance of the krakenex.API class. A reference to the input
         is created and accessible via ``KrakenAPI.api``.
 
-    tier : int
+    tier : int, optional (default=3)
         Your Kraken tier level, used to adjust the limit of the call rate to
         the Kraken API in order to prevent 15 minute temporary lockouts. See
         https://support.kraken.com/hc/en-us/articles/206548367.
+        Set tier=0 to disable the call rate limiter.
 
     Attributes
     ----------
@@ -107,7 +114,7 @@ class KrakenAPI(object):
 
     """
 
-    def __init__(self, api, tier=2):
+    def __init__(self, api, tier=3):
 
         self.api = api
 
@@ -115,7 +122,11 @@ class KrakenAPI(object):
         self.time_of_last_query = datetime.datetime.now()
         self.api_counter = 0
 
-        if tier == 2:
+        if tier == 0:
+            self.limit = float('inf')
+            self.factor = 3  # does not matter
+
+        elif tier == 2:
             self.limit = 15
             self.factor = 3  # down by 1 every three seconds
 
@@ -140,6 +151,17 @@ class KrakenAPI(object):
             The server's datetime.
         unixtime : int
             The unix timestamp.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         """
 
@@ -182,6 +204,17 @@ class KrakenAPI(object):
             altname = alternate name
             decimals = scaling decimal places for record keeping
             display_decimals = scaling decimal places for output display.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         """
 
@@ -240,6 +273,17 @@ class KrakenAPI(object):
             margin_call = margin call level
             margin_stop = stop-out/liquidation margin level
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         If an asset pair is on a maker/taker fee schedule, the taker side is
@@ -289,6 +333,17 @@ class KrakenAPI(object):
             h = high array(<today>, <last 24 hours>),
             o = today's opening price
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         Today's prices start at 00:00:00 UTC.
@@ -335,9 +390,8 @@ class KrakenAPI(object):
         Returns
         -------
         ohlc : pd.DataFrame
-            index = pair name
+            index = datetime (UTC)
             time (unixtime)
-            dtime (UTC)
             open
             high
             low
@@ -349,6 +403,17 @@ class KrakenAPI(object):
         last : int
             Unixtime to be used as since when polling for new, committed OHLC
             data.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         Notes
         -----
@@ -417,6 +482,17 @@ class KrakenAPI(object):
             volume
             time (unixtime)
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         """
 
         # create data dictionary
@@ -484,6 +560,17 @@ class KrakenAPI(object):
         last : int
             Unixtime to be used as since when polling for new trade data.
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         """
 
         # create data dictionary
@@ -546,6 +633,17 @@ class KrakenAPI(object):
         last : int
             Unixtime to be used as since when polling for new spread data.
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         ``since`` is inclusive so any returned data with the same time as the
@@ -598,6 +696,17 @@ class KrakenAPI(object):
             index = asset name
             vol = balance amount
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         """
 
         # query
@@ -641,6 +750,17 @@ class KrakenAPI(object):
             mf = free margin = equity - initial margin (maximum margin
                 available to open new positions)
             ml = margin level = (equity / initial margin) * 100
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         Notes
         -----
@@ -728,6 +848,17 @@ class KrakenAPI(object):
             trades = array of trade ids related to order (if trades info
                 requested and data available)
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         Unless otherwise stated, costs, fees, prices, and volumes are in the
@@ -793,6 +924,17 @@ class KrakenAPI(object):
         count :
             Amount of available order info matching criteria.
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         Times given by order tx ids are more accurate than unix timestamps. If
@@ -850,6 +992,17 @@ class KrakenAPI(object):
         -------
         orders : pd.DataFrame
             order_txid = order info.  See get_open_orders/get_closed_orders.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         """
 
@@ -944,6 +1097,17 @@ class KrakenAPI(object):
         count : int
             Amount of available trades info matching criteria.
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         Unless otherwise stated, costs, fees, prices, and volumes are in the
@@ -1002,6 +1166,17 @@ class KrakenAPI(object):
         -------
         trades : pd.DataFrame
             See get_trades_history.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         """
 
@@ -1072,6 +1247,17 @@ class KrakenAPI(object):
             oflags = comma delimited list of order flags
                 viqc = volume in quote currency
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         Unless otherwise stated, costs, fees, prices, and volumes are in the
@@ -1140,6 +1326,17 @@ class KrakenAPI(object):
         count : int
             Amount of available ledger info matching criteria.
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         Times given by ledger ids are more accurate than unix timestamps.
@@ -1193,6 +1390,17 @@ class KrakenAPI(object):
         -------
         ledgers : pd.DataFrame
             ledger_id = ledger info.  See get_ledgers_info.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
 
         """
 
@@ -1272,6 +1480,17 @@ class KrakenAPI(object):
                 tiervolume = volume level of current tier (if not fixed fee.
                     nil if at lowest fee tier)
 
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
         Notes
         -----
         If an asset pair is on a maker/taker fee schedule, the taker side is
@@ -1347,9 +1566,9 @@ class KrakenAPI(object):
                 triggered limit offset)
             stop-loss-and-limit (price = stop loss price, price2 = limit price)
             settle-position
+        volume = order volume in lots
         price = price (optional.  dependent upon ordertype)
         price2 = secondary price (optional.  dependent upon ordertype)
-        volume = order volume in lots
         leverage = amount of leverage desired (optional.  default = none)
         oflags = comma delimited list of order flags (optional):
             viqc = volume in quote currency (not available for leveraged
@@ -1383,26 +1602,30 @@ class KrakenAPI(object):
         txid = array of transaction ids for order (if order was added
             successfully)
 
-        Errors
+        Raises
         ------
-        Errors: errors include (but are not limited to):
+        HTTPError
+            An HTTP error occurred.
 
-        EGeneral:Invalid arguments
-        EService:Unavailable
-        ETrade:Invalid request
-        EOrder:Cannot open position
-        EOrder:Cannot open opposing position
-        EOrder:Margin allowance exceeded
-        EOrder:Margin level too low
-        EOrder:Insufficient margin (exchange does not have sufficient funds to
-            allow margin trading)
-        EOrder:Insufficient funds (insufficient user funds)
-        EOrder:Order minimum not met (volume too low)
-        EOrder:Orders limit exceeded
-        EOrder:Positions limit exceeded
-        EOrder:Rate limit exceeded
-        EOrder:Scheduled orders limit exceeded
-        EOrder:Unknown position
+        KrakenAPIError
+            A kraken.com API error occurred.
+            Errors: errors include (but are not limited to):
+            EGeneral:Invalid arguments
+            EService:Unavailable
+            ETrade:Invalid request
+            EOrder:Cannot open position
+            EOrder:Cannot open opposing position
+            EOrder:Margin allowance exceeded
+            EOrder:Margin level too low
+            EOrder:Insufficient margin (exchange does not have sufficient funds
+                to allow margin trading)
+            EOrder:Insufficient funds (insufficient user funds)
+            EOrder:Order minimum not met (volume too low)
+            EOrder:Orders limit exceeded
+            EOrder:Positions limit exceeded
+            EOrder:Rate limit exceeded
+            EOrder:Scheduled orders limit exceeded
+            EOrder:Unknown position
 
         Notes
         -----
@@ -1457,6 +1680,14 @@ class KrakenAPI(object):
 
         pending : bool
             If set, order(s) is/are pending cancellation.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
 
         Notes
         -----
