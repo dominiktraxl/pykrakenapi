@@ -25,6 +25,9 @@ https://www.kraken.com/help/api
 and
 https://github.com/veox/python3-krakenex
 
+Whenever convenient, methods return pandas.DataFrame objects. Also implements a
+call rate limiter based on your Kraken tier level.
+
 
 Documentation
 -------------
