@@ -13,6 +13,7 @@ https://github.com/veox/python3-krakenex
 Whenever convenient, methods return pandas.DataFrame objects. Also implements a
 call rate limiter based on your Kraken tier level.
 
+
 Quick Start
 -----------
 
@@ -27,6 +28,9 @@ Then, import and get started with::
 
    >>> from pykrakenapi import KrakenAPI
    >>> help(KrakenAPI)
+
+pykrakenapi requires Python >= 3.3, krakenex >= 2.0.0 and pandas. These
+requirements should be installed automatically via pip.
 
 
 Example
