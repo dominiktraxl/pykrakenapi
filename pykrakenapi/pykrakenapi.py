@@ -26,10 +26,14 @@ For further information type
 
 """
 
+import time
 import datetime
 from functools import wraps
 
+import numpy as np
 import pandas as pd
+
+from requests import HTTPError
 
 
 def callratelimiter(query_type):
@@ -53,26 +57,37 @@ def callratelimiter(query_type):
             elif query_type == 'other':
                 incr = 1
 
-            # decrease api counter, update time of last query
-            now = datetime.datetime.now()
-            decr = int((now - self.time_of_last_query).seconds / self.factor)
-            self.api_counter -= decr
-            if self.api_counter < 0:
-                self.api_counter = 0
-            self.time_of_last_query = now
+            # decrease api counter
+            self._decrease_api_counter()
 
             # return api call
             if self.api_counter < self.limit:
-                result = func(*args, **kwargs)
-                self.api_counter += incr
-                return result
+                # no retries
+                if self.retry == 0:
+                    self.api_counter += incr
+                    result = func(*args, **kwargs)
+                    return result
+                # do retries
+                else:
+                    attempt = 0
+                    while self.api_counter < self.limit:
+                        try:
+                            self.api_counter += incr
+                            result = func(*args, **kwargs)
+                            return result
+                        except (HTTPError, KrakenAPIError) as err:
+                            print('attempt: {} |'.format(
+                                str(attempt).zfill(3)), err)
+                            attempt += 1
+                            time.sleep(self.retry)
+                            self._decrease_api_counter()
+                            continue
 
             # raise error if limit exceeded
-            else:
-                msg = ("call rate limiter exceeded (counter={}, limit={})")
-                msg = msg.format(str(self.api_counter).zfill(2),
-                                 str(self.limit).zfill(2))
-                raise CallRateLimitError(msg)
+            msg = ("call rate limiter exceeded (counter={}, limit={})")
+            msg = msg.format(str(self.api_counter).zfill(2),
+                             str(self.limit).zfill(2))
+            raise CallRateLimitError(msg)
 
         return wrapper
     return decorate_func
@@ -107,6 +122,12 @@ class KrakenAPI(object):
         https://support.kraken.com/hc/en-us/articles/206548367.
         Set tier=0 to disable the call rate limiter.
 
+    retry : float, optional (default=.5)
+        Sleep for ``retry`` seconds after an HTTPError/KrakenAPIError occurred
+        and retry the query until it is succesful (or the call rate limiter was
+        triggered). If ``retry`` is set to 0, raise a potential
+        HTTPError/KrakenAPIError instead of retrying the query.
+
     Attributes
     ----------
     api : krakenex.API
@@ -114,7 +135,7 @@ class KrakenAPI(object):
 
     """
 
-    def __init__(self, api, tier=3):
+    def __init__(self, api, tier=3, retry=.5):
 
         self.api = api
 
@@ -137,6 +158,9 @@ class KrakenAPI(object):
         elif tier == 4:
             self.limit = 20
             self.factor = 1  # down by 1 every one second
+
+        # retry timer
+        self.retry = retry
 
     @callratelimiter('other')
     def get_server_time(self):
@@ -1147,6 +1171,94 @@ class KrakenAPI(object):
 
         return trades, count
 
+    def get_trades_summary(self, start=None, end=None, ofs=None):
+        """Get trades summary.
+
+        Return a ``pd.DataFrame`` summarizing your trades per asset pair, and a
+        ``pd.Series`` summarizing all trades.
+
+        Parameters
+        ----------
+        start : int, optional (default=None)
+            Starting unixtime or trade tx id of results (exclusive).
+
+        end : int, optional (default=None)
+            Ending unixtime or trade tx id of results (inclusive).
+
+        ofs : ?, optional (default=None)
+            Result offset.
+
+        Returns
+        -------
+        s : pd.DataFrame
+            index = asset pairs
+            vol = volume (base currency)
+            cost = total cost of trades (quote currency)
+            present_worth = total worth of assets presently (quote currency)
+            avg_price = average price paid for assets (quote currency)
+            gain = in percent [(present_price / avg_price - 1) * 100]
+            fee = total fee (quote currency)
+
+        ss : pd.Series
+            Summary of all trades.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # get trades history
+        th, _ = self.get_trades_history(start=start, end=end, ofs=ofs)
+
+        # aggregate buys and sells
+        buys = th[th.type == 'buy'].groupby('pair').agg(
+            {'cost': 'sum', 'fee': 'sum', 'vol': 'sum'})
+        sells = th[th.type == 'sell'].groupby('pair').agg(
+            {'cost': 'sum', 'fee': 'sum', 'vol': 'sum'})
+
+        # balances, average price
+        s = buys.copy()
+        s['cost'] = buys.cost.subtract(sells.cost, fill_value=0)
+        s['fee'] = buys.fee.add(sells.fee, fill_value=0)
+        s['vol'] = buys.vol.subtract(sells.vol, fill_value=0)
+        s['avg_price'] = s.cost / s.vol
+
+        # present price, worth -> gain
+        pairs = ', '.join(s.index.values)
+        s['present_price'] = self.get_ticker_information(pairs)['c'].apply(
+            lambda x: x[0]).astype(float)
+        s['present_worth'] = s.present_price * s.vol
+        s['gain'] = (s.present_price / s.avg_price - 1) * 100
+
+        # negative cost
+        s.loc[s.cost <= 0, ['avg_price', 'gain']] = np.nan
+
+        # summary of all trades
+        ss = pd.Series(
+            index=['total_cost', 'total_worth', 'total_gain', 'total_fee'],
+            data=[s.cost.sum(), s.present_worth.sum(),
+                  (s.present_worth.sum() / s.cost.sum() - 1) * 100,
+                  s.fee.sum()]
+        )
+
+        # negative total cost
+        if ss.total_cost <= 0:
+            ss.loc['total_gain'] = np.nan
+
+        # reorder
+        s = s[['vol', 'cost', 'present_worth', 'avg_price', 'present_price',
+               'gain', 'fee']]
+
+        return s, ss
+
     @callratelimiter('ledger/trade history')
     def query_trades_info(self, txid, trades=False):
         """Query trades info.
@@ -1746,3 +1858,13 @@ class KrakenAPI(object):
         dt = datetime.datetime(1970, 1, 1) + datetime.timedelta(0, unixtime)
 
         return dt
+
+    def _decrease_api_counter(self):
+
+        # decrease api counter, update time of last query
+        now = datetime.datetime.now()
+        decr = int((now - self.time_of_last_query).seconds / self.factor)
+        self.api_counter -= decr
+        if self.api_counter < 0:
+            self.api_counter = 0
+        self.time_of_last_query = now
