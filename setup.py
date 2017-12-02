@@ -19,12 +19,12 @@ from setuptools import setup, find_packages
 
 setup(
     name="pykrakenapi",
-    version='0.0.3',
+    version='0.0.4',
     packages=find_packages(),
     author="Dominik Traxl",
     author_email="dominik.traxl@posteo.org",
     url='https://github.com/dominiktraxl/pykrakenapi/',
-    download_url='https://github.com/dominiktraxl/pykrakenapi/tarball/v0.0.3',
+    download_url='https://github.com/dominiktraxl/pykrakenapi/tarball/v0.0.4',
     description=("A Python implementation of the Kraken API."),
     long_description=open('README.rst').read(),
     install_requires=['krakenex>=2.0.0',
