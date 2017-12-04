@@ -623,6 +623,10 @@ class KrakenAPI(object):
         trades.sort_values('dtime', ascending=False, inplace=True)
         trades.set_index('dtime', inplace=True)
 
+        # dtypes
+        for col in ['price', 'volume']:
+            trades.loc[:, col] = trades[col].astype(float)
+
         # last timestamp
         last = int(res['result']['last'])
 
@@ -707,11 +711,16 @@ class KrakenAPI(object):
         return spread, last
 
     @callratelimiter('other')
-    def get_account_balance(self):
+    def get_account_balance(self, otp=None):
         """Get asset names and balance amount.
 
         Return a ``pd.DataFrame`` of asset names and their corresponding
         balance amounts.
+
+        Parameters
+        ----------
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -747,7 +756,7 @@ class KrakenAPI(object):
         return balance
 
     @callratelimiter('ledger/trade history')
-    def get_trade_balance(self, aclass='currency', asset='ZEUR'):
+    def get_trade_balance(self, aclass='currency', asset='ZEUR', otp=None):
         """Get trade balance info.
 
         Return a ``pd.DataFrame`` of trade balance info.
@@ -759,6 +768,9 @@ class KrakenAPI(object):
 
         asset : str, optional (default='ZUSD')
             Base asset used to determine balance.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -811,7 +823,7 @@ class KrakenAPI(object):
         return tradebalance
 
     @callratelimiter('other')
-    def get_open_orders(self, trades=False, userref=None):
+    def get_open_orders(self, trades=False, userref=None, otp=None):
         """UNTESTED!
 
         Get open orders info.
@@ -825,6 +837,9 @@ class KrakenAPI(object):
 
         userref : int, optional (default=None)
             Restrict results to given user reference id.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -912,7 +927,7 @@ class KrakenAPI(object):
 
     @callratelimiter('other')
     def get_closed_orders(self, trades=False, userref=None, start=None,
-                          end=None, ofs=None, closetime=None):
+                          end=None, ofs=None, closetime=None, otp=None):
         """Get closed orders info.
 
         Return a ``pd.DataFrame`` of closed orders info.
@@ -937,6 +952,9 @@ class KrakenAPI(object):
         closetime : str, optional (default=None)
             Which time to use, must be one of {'open', 'close', 'both'}. If
             None (default), closetime='both'.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -995,7 +1013,7 @@ class KrakenAPI(object):
         return closed, count
 
     @callratelimiter('other')
-    def query_orders_info(self, txid, trades=False, userref=None):
+    def query_orders_info(self, txid, trades=False, userref=None, otp=None):
         """Query orders info.
 
         Return a ``pd.DataFrame`` of orders info.
@@ -1011,6 +1029,9 @@ class KrakenAPI(object):
 
         userref : int, optional (default=None)
             Restrict results to given user reference id.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1057,7 +1078,7 @@ class KrakenAPI(object):
 
     @callratelimiter('ledger/trade history')
     def get_trades_history(self, type='all', trades=False, start=None,
-                           end=None, ofs=None):
+                           end=None, ofs=None, otp=None):
         """Get trades history.
 
         Return a ``pd.DataFrame`` of the trade history.
@@ -1084,6 +1105,9 @@ class KrakenAPI(object):
 
         ofs : ?, optional (default=None)
             Result offset.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1171,7 +1195,7 @@ class KrakenAPI(object):
 
         return trades, count
 
-    def get_trades_summary(self, start=None, end=None, ofs=None):
+    def get_trades_summary(self, start=None, end=None, ofs=None, otp=None):
         """Get trades summary.
 
         Return a ``pd.DataFrame`` summarizing your trades per asset pair, and a
@@ -1187,6 +1211,9 @@ class KrakenAPI(object):
 
         ofs : ?, optional (default=None)
             Result offset.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1216,7 +1243,7 @@ class KrakenAPI(object):
         """
 
         # get trades history
-        th, _ = self.get_trades_history(start=start, end=end, ofs=ofs)
+        th, _ = self.get_trades_history(start=start, end=end, ofs=ofs, otp=otp)
 
         # aggregate buys and sells
         buys = th[th.type == 'buy'].groupby('pair').agg(
@@ -1243,8 +1270,14 @@ class KrakenAPI(object):
 
         # summary of all trades
         ss = pd.Series(
-            index=['total_cost', 'total_worth', 'total_gain', 'total_fee'],
-            data=[s.cost.sum(), s.present_worth.sum(),
+            index=['total_cost',
+                   'total_worth',
+                   'total_balance',
+                   'total_gain',
+                   'total_fee'],
+            data=[s.cost.sum(),
+                  s.present_worth.sum(),
+                  s.present_worth.sum() - s.cost.sum(),
                   (s.present_worth.sum() / s.cost.sum() - 1) * 100,
                   s.fee.sum()]
         )
@@ -1260,7 +1293,7 @@ class KrakenAPI(object):
         return s, ss
 
     @callratelimiter('ledger/trade history')
-    def query_trades_info(self, txid, trades=False):
+    def query_trades_info(self, txid, trades=False, otp=None):
         """Query trades info.
 
         Return a ``pd.DataFrame`` of trades info.
@@ -1273,6 +1306,9 @@ class KrakenAPI(object):
 
         trades : bool, optional (default=False)
             Whether or not to include trades related to position in output.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1320,7 +1356,7 @@ class KrakenAPI(object):
         return trades
 
     @callratelimiter('other')
-    def get_open_positions(self, txid=None, docalcs=False):
+    def get_open_positions(self, txid=None, docalcs=False, otp=None):
         """UNTESTED!
 
         Get open positins info.
@@ -1334,6 +1370,9 @@ class KrakenAPI(object):
 
         docalcs : bool, optional (default=False)
             Whether or not to include profit/loss calculations.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1395,7 +1434,7 @@ class KrakenAPI(object):
 
     @callratelimiter('ledger/trade history')
     def get_ledgers_info(self, aclass=None, asset=None, type='all', start=None,
-                         end=None, ofs=None):
+                         end=None, ofs=None, otp=None):
         """Get ledgers info.
 
         Return a ``pd.DataFrame`` of ledgers info.
@@ -1421,6 +1460,9 @@ class KrakenAPI(object):
 
         ofs : ?, optional (default=None)
             Result offset.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1487,7 +1529,7 @@ class KrakenAPI(object):
         return ledgers, count
 
     @callratelimiter('ledger/trade history')
-    def query_ledgers(self, id):
+    def query_ledgers(self, id, otp=None):
         """Query ledgers info.
 
         Return a ``pd.DataFrame`` of ledgers info.
@@ -1497,6 +1539,9 @@ class KrakenAPI(object):
         id : int
             Comma delimited list of ledger ids to query info about
             (20 maximum).
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1545,7 +1590,7 @@ class KrakenAPI(object):
         return ledgers
 
     @callratelimiter('ledger/trade history')
-    def get_trade_volume(self, pair=None, fee_info=True):
+    def get_trade_volume(self, pair=None, fee_info=True, otp=None):
         """Get trade volume.
 
         Return a ``pd.DataFrame`` of trade volume.
@@ -1558,6 +1603,9 @@ class KrakenAPI(object):
 
         fee_info : bool, optional (default=True)
             Whether or not to include fee info in results.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
@@ -1648,7 +1696,8 @@ class KrakenAPI(object):
                            price2=None, leverage=None, oflags=None, starttm=0,
                            expiretm=0, userref=None, validate=True,
                            close_ordertype=None, close_price=None,
-                           close_price2=None):
+                           close_price2=None, otp=None,
+                           trading_agreement='agree'):
         """UNTESTED!
 
         Add a standard order.
@@ -1658,9 +1707,14 @@ class KrakenAPI(object):
 
         Parameters
         ----------
-        pair = asset pair
-        type = type of order (buy/sell)
-        ordertype = order type:
+        pair : str
+            Asset pair.
+
+        type : str
+            Type of order (buy/sell).
+
+        ordertype : str
+            Order type, one of:
             market
             limit (price = limit price)
             stop-loss (price = stop loss price)
@@ -1678,41 +1732,64 @@ class KrakenAPI(object):
                 triggered limit offset)
             stop-loss-and-limit (price = stop loss price, price2 = limit price)
             settle-position
-        volume = order volume in lots
-        price = price (optional.  dependent upon ordertype)
-        price2 = secondary price (optional.  dependent upon ordertype)
-        leverage = amount of leverage desired (optional.  default = none)
-        oflags = comma delimited list of order flags (optional):
+
+        volume : str
+            Order volume in lots. For minimum order sizes, see
+            https://support.kraken.com/hc/en-us/articles/205893708
+
+        price : str, optional (default=None)
+            Price (optional). Dependent upon ordertype
+
+        price2 : str, optional (default=None)
+            Secondary price (optional). Dependent upon ordertype
+
+        leverage : str, optional (default=None)
+            Amount of leverage desired (optional). Default = none
+
+        oflags : str, optional (default=None)
+            Comma delimited list of order flags:
             viqc = volume in quote currency (not available for leveraged
                 orders)
             fcib = prefer fee in base currency
             fciq = prefer fee in quote currency
             nompp = no market price protection
             post = post only order (available when ordertype = limit)
-        starttm = scheduled start time (optional):
+
+        starttm : int, optional (default=None)
+            Scheduled start time:
             0 = now (default)
             +<n> = schedule start time <n> seconds from now
             <n> = unix timestamp of start time
-        expiretm = expiration time (optional):
+
+        expiretm : int, optional (default=None)
+            Expiration time:
             0 = no expiration (default)
             +<n> = expire <n> seconds from now
             <n> = unix timestamp of expiration time
-        userref = user reference id.  32-bit signed number.  (optional)
-        validate = validate inputs only.  do not submit order (optional)
+
+        userref : int, optional (default=None)
+            User reference id.  32-bit signed number.
+
+        validate : bool, optional (default=True)
+            Validate inputs only.  Do not submit order (default).
 
         optional closing order to add to system when order gets filled:
             close[ordertype] = order type
             close[price] = price
             close[price2] = secondary price
 
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
         Returns
         -------
-        descr = order description info
-            order = order description
-            close = conditional close order description (if conditional close
-                set)
-        txid = array of transaction ids for order (if order was added
-            successfully)
+        res : dict
+            res['descr'] = order description info
+                order = order description
+                close = conditional close order description (if conditional
+                    close set)
+            res['txid'] = array of transaction ids for order (if order was
+                added successfully)
 
         Raises
         ------
@@ -1773,7 +1850,7 @@ class KrakenAPI(object):
 
         return res['result']
 
-    def cancel_open_order(self, txid):
+    def cancel_open_order(self, txid, otp=None):
         """UNTESTED!
 
         Cancel open order(s).
@@ -1784,6 +1861,9 @@ class KrakenAPI(object):
         ----------
         txid : int
             Transaction id.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
