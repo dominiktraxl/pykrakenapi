@@ -15,7 +15,6 @@ downloading/updating trade data (in that case, only the arguments ``folder``,
 import argparse
 import os
 from pathlib import Path
-import time
 import pytz
 
 import pandas as pd
@@ -67,26 +66,6 @@ parser.add_argument(
     type=int,
     default=0)
 
-parser.add_argument(
-    '--retry',
-    help='retry query after ``retry`` seconds whenever an '
-         'HTTPError/KrakenAPIError occurs',
-    type=int,
-    default=1)
-
-parser.add_argument(
-    '--tier',
-    help='your kraken tier level',
-    type=int,
-    default=3)
-
-parser.add_argument(
-    '--sleep',
-    help='sleep for ``sleep`` seconds whenever the '
-         'call rate limit was exceeded.',
-    type=int,
-    default=4)
-
 # args
 args = parser.parse_args()
 
@@ -94,20 +73,16 @@ folder = args.folder
 pair = args.pair
 since = args.since
 timezone = args.timezone
-retry = args.retry
-tier = args.tier
-sleep = args.sleep
 interval = args.interval
 
 
 class GetTradeData(object):
 
-    def __init__(self, folder, pair, retry, tier, sleep, timezone):
+    def __init__(self, folder, pair, timezone):
 
         # initiate api
         self.api = krakenex.API()
-        self.k = KrakenAPI(self.api, tier, retry)
-        self.sleep = sleep
+        self.k = KrakenAPI(self.api, tier=0, retry=.1)
 
         # set pair
         self.pair = pair
@@ -133,7 +108,6 @@ class GetTradeData(object):
             last = since
 
         # get data
-        attempt = 0
         while True:
             try:
                 fname = folder + '{}.pickle'.format(str(last).zfill(19))
@@ -148,15 +122,10 @@ class GetTradeData(object):
                 print('storing', fname)
                 trades.to_pickle(fname)
 
-                # reset attempt
-                attempt = 0
-
-            except CallRateLimitError as err:
-                print('CallRateLimitError: {} |'.format(str(attempt).zfill(3)),
-                      err)
-                attempt += 1
-                time.sleep(self.sleep)
-                continue
+            except CallRateLimitError:
+                print('\n this should not happen. please report an issue on '
+                      'github! thanks. \n')
+                raise
 
             except ValueError:
                 print('download/update finished!')
@@ -198,7 +167,7 @@ class GetTradeData(object):
         ohlc.to_pickle(fname)
 
 
-dl = GetTradeData(folder, pair, retry, tier, sleep, timezone)
+dl = GetTradeData(folder, pair, timezone)
 
 if interval == 0:
     dl.download_trade_data(since)
