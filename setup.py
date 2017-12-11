@@ -27,6 +27,7 @@ setup(
     download_url='https://github.com/dominiktraxl/pykrakenapi/tarball/v0.0.4',
     description=("A Python implementation of the Kraken API."),
     long_description=open('README.rst').read(),
+    python_requires='>=3',
     install_requires=['krakenex>=2.0.0',
                       'pandas'],
     license="GNU GPL",
