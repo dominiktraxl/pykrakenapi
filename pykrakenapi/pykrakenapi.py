@@ -30,10 +30,34 @@ import time
 import datetime
 from functools import wraps
 
-import numpy as np
 import pandas as pd
 
 from requests import HTTPError
+
+
+def crl_sleep(func):
+    @wraps(func)
+    def wrapper(*args, **kwargs):
+
+        self = args[0]
+        crl_sleep = self.crl_sleep
+
+        # raise CallRateLimitError if crl sleep is deactivated
+        if crl_sleep == 0:
+            result = func(*args, **kwargs)
+            return result
+
+        # otherwise, retry after "crl_sleep" seconds
+        while True:
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except CallRateLimitError as err:
+                print(err, '\n sleeping for {} seconds'.format(crl_sleep))
+                time.sleep(crl_sleep)
+                continue
+
+    return wrapper
 
 
 def callratelimiter(query_type):
@@ -128,6 +152,11 @@ class KrakenAPI(object):
         triggered). If ``retry`` is set to 0, raise a potential
         HTTPError/KrakenAPIError instead of retrying the query.
 
+    crl_sleep : int, optional (default=5)
+        Sleep for ``crl_sleep`` seconds after a CallRateLimitError occurred,
+        then retry the query. If ``crl_sleep`` is set to 0, raise a potential
+        CallRateLimitError instead of sleeping and retrying.
+
     Attributes
     ----------
     api : krakenex.API
@@ -135,7 +164,7 @@ class KrakenAPI(object):
 
     """
 
-    def __init__(self, api, tier=3, retry=.5):
+    def __init__(self, api, tier=3, retry=.5, crl_sleep=5):
 
         self.api = api
 
@@ -159,9 +188,11 @@ class KrakenAPI(object):
             self.limit = 20
             self.factor = 1  # down by 1 every one second
 
-        # retry timer
+        # retry timers
         self.retry = retry
+        self.crl_sleep = crl_sleep
 
+    @crl_sleep
     @callratelimiter('other')
     def get_server_time(self):
         """Get server time.
@@ -202,6 +233,7 @@ class KrakenAPI(object):
 
         return dt, unixtime
 
+    @crl_sleep
     @callratelimiter('other')
     def get_asset_info(self, info=None, aclass=None, asset=None):
         """Get asset info.
@@ -258,6 +290,7 @@ class KrakenAPI(object):
 
         return assets
 
+    @crl_sleep
     @callratelimiter('other')
     def get_tradable_asset_pairs(self, info=None, pair=None):
         """Get tradable asset pairs.
@@ -332,6 +365,7 @@ class KrakenAPI(object):
 
         return pairs
 
+    @crl_sleep
     @callratelimiter('other')
     def get_ticker_information(self, pair):
         """Get ticker information.
@@ -390,6 +424,7 @@ class KrakenAPI(object):
 
         return ticker
 
+    @crl_sleep
     @callratelimiter('other')
     def get_ohlc_data(self, pair, interval=1, since=None):
         """Get ohlc data for a given pair.
@@ -475,6 +510,7 @@ class KrakenAPI(object):
 
         return ohlc, last
 
+    @crl_sleep
     @callratelimiter('other')
     def get_order_book(self, pair, count=100):
         """Get order book (market depth).
@@ -553,6 +589,7 @@ class KrakenAPI(object):
 
         return asks, bids
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_recent_trades(self, pair, since=None):
         """Get recent trades data.
@@ -632,6 +669,7 @@ class KrakenAPI(object):
 
         return trades, last
 
+    @crl_sleep
     @callratelimiter('other')
     def get_recent_spread_data(self, pair, since=None):
         """Get recent spread data.
@@ -710,6 +748,7 @@ class KrakenAPI(object):
 
         return spread, last
 
+    @crl_sleep
     @callratelimiter('other')
     def get_account_balance(self, otp=None):
         """Get asset names and balance amount.
@@ -755,6 +794,7 @@ class KrakenAPI(object):
 
         return balance
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_trade_balance(self, aclass='currency', asset='ZEUR', otp=None):
         """Get trade balance info.
@@ -822,6 +862,7 @@ class KrakenAPI(object):
 
         return tradebalance
 
+    @crl_sleep
     @callratelimiter('other')
     def get_open_orders(self, trades=False, userref=None, otp=None):
         """UNTESTED!
@@ -925,6 +966,7 @@ class KrakenAPI(object):
 
         return openorders
 
+    @crl_sleep
     @callratelimiter('other')
     def get_closed_orders(self, trades=False, userref=None, start=None,
                           end=None, ofs=None, closetime=None, otp=None):
@@ -1012,6 +1054,7 @@ class KrakenAPI(object):
 
         return closed, count
 
+    @crl_sleep
     @callratelimiter('other')
     def query_orders_info(self, txid, trades=False, userref=None, otp=None):
         """Query orders info.
@@ -1076,6 +1119,7 @@ class KrakenAPI(object):
 
         return orders
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_trades_history(self, type='all', trades=False, start=None,
                            end=None, ofs=None, otp=None):
@@ -1195,6 +1239,7 @@ class KrakenAPI(object):
 
         return trades, count
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def query_trades_info(self, txid, trades=False, otp=None):
         """Query trades info.
@@ -1258,6 +1303,7 @@ class KrakenAPI(object):
 
         return trades
 
+    @crl_sleep
     @callratelimiter('other')
     def get_open_positions(self, txid=None, docalcs=False, otp=None):
         """UNTESTED!
@@ -1335,6 +1381,7 @@ class KrakenAPI(object):
 
         return openpositions
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_ledgers_info(self, aclass=None, asset=None, type='all', start=None,
                          end=None, ofs=None, otp=None):
@@ -1431,6 +1478,7 @@ class KrakenAPI(object):
 
         return ledgers, count
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def query_ledgers(self, id, otp=None):
         """Query ledgers info.
@@ -1492,6 +1540,7 @@ class KrakenAPI(object):
 
         return ledgers
 
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_trade_volume(self, pair=None, fee_info=True, otp=None):
         """Get trade volume.
