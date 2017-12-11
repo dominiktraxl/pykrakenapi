@@ -11,7 +11,8 @@ and
 https://github.com/veox/python3-krakenex
 
 Whenever convenient, methods return pandas.DataFrame objects. Also implements a
-call rate limiter based on your Kraken tier level.
+call rate limiter based on your Kraken tier level, as well as automatic retries
+on HTTPErrors/Kraken API Errors.
 
 
 Quick Start
@@ -77,8 +78,8 @@ See the docstrings of the methods of the KrakenAPI class.
 Development
 -----------
 
-This package should be considered early alpha state. Contributions in any way,
-shape or form are absolutely welcome!
+This package should be considered beta state, since some methods have not been
+properly tested yet. Contributions in any way, shape or form are welcome!
 
 
 Bug Reports
