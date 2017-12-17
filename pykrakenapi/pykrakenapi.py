@@ -1790,6 +1790,8 @@ class KrakenAPI(object):
         """
 
         # create data dictionary
+        if validate is False:
+            validate = None
         data = {arg: value for arg, value in locals().items() if
                 arg != 'self' and value is not None}
 
