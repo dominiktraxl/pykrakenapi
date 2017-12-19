@@ -446,6 +446,11 @@ class KrakenAPI(object):
             Return committed OHLC data since given unixtime (exclusive). If
             None, retrieve from earliest time possible.
 
+        ascending : bool, optional (default=False)
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
+
         Returns
         -------
         ohlc : pd.DataFrame
@@ -462,10 +467,6 @@ class KrakenAPI(object):
         last : int
             Unixtime to be used as since when polling for new, committed OHLC
             data.
-
-        ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
 
         Raises
         ------
@@ -531,8 +532,9 @@ class KrakenAPI(object):
             bids and asks.
 
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
@@ -615,8 +617,9 @@ class KrakenAPI(object):
             None, retrieve from earliest time possible.
 
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
@@ -697,10 +700,11 @@ class KrakenAPI(object):
         since : int, optional (default=None)
             Return spread data since given unixtime (inclusive). If
             None, retrieve from earliest time possible.
-        
+
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
@@ -1168,10 +1172,11 @@ class KrakenAPI(object):
 
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
-       
+
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
@@ -1277,10 +1282,11 @@ class KrakenAPI(object):
 
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
-        
+
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
@@ -1439,8 +1445,9 @@ class KrakenAPI(object):
             Two-factor password (if two-factor enabled, otherwise not required)
 
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
@@ -1523,8 +1530,9 @@ class KrakenAPI(object):
             Two-factor password (if two-factor enabled, otherwise not required)
 
         ascending : bool, optional (default=False)
-            If set to true, the data frame will be sorted with the most recent date in the last position. 
-            When set to false, the most recent date is in the first position.
+            If set to True, the data frame will be sorted with the most recent
+            date in the last position. When set to False, the most recent date
+            is in the first position.
 
         Returns
         -------
