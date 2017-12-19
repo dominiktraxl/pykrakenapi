@@ -426,7 +426,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('other')
-    def get_ohlc_data(self, pair, interval=1, since=None):
+    def get_ohlc_data(self, pair, interval=1, since=None, ascending=False):
         """Get ohlc data for a given pair.
 
         Return a ``pd.DataFrame`` of the OHLC data for a given pair and time
@@ -462,6 +462,10 @@ class KrakenAPI(object):
         last : int
             Unixtime to be used as since when polling for new, committed OHLC
             data.
+
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Raises
         ------
@@ -501,7 +505,7 @@ class KrakenAPI(object):
             'time', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'
         ]
         ohlc['dtime'] = pd.to_datetime(ohlc.time, unit='s')
-        ohlc.sort_values('dtime', ascending=False, inplace=True)
+        ohlc.sort_values('dtime', ascending=ascending, inplace=True)
         ohlc.set_index('dtime', inplace=True)
 
         # dtypes
@@ -512,7 +516,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('other')
-    def get_order_book(self, pair, count=100):
+    def get_order_book(self, pair, count=100, ascending=False):
         """Get order book (market depth).
 
         Return a ``pd.DataFrame`` for both asks and bids for a given pair.
@@ -525,6 +529,10 @@ class KrakenAPI(object):
         count : int, optional (default=100)
             Maximum number of asks/bids. Per default, get the latest 100
             bids and asks.
+
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -580,8 +588,8 @@ class KrakenAPI(object):
         bids['dtime'] = pd.to_datetime(bids.time, unit='s')
 
         # sort by time
-        asks.sort_values('dtime', ascending=False, inplace=True)
-        bids.sort_values('dtime', ascending=False, inplace=True)
+        asks.sort_values('dtime', ascending=ascending, inplace=True)
+        bids.sort_values('dtime', ascending=ascending, inplace=True)
 
         # set index
         asks.set_index('dtime', inplace=True)
@@ -591,7 +599,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('ledger/trade history')
-    def get_recent_trades(self, pair, since=None):
+    def get_recent_trades(self, pair, since=None, ascending=False):
         """Get recent trades data.
 
         Return a ``pd.DataFrame`` of recent trade data for a given pair,
@@ -605,6 +613,10 @@ class KrakenAPI(object):
         since : int, optional (default=None)
             Return trade data since given unixtime (exclusive). If
             None, retrieve from earliest time possible.
+
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -657,7 +669,7 @@ class KrakenAPI(object):
 
         # time
         trades['dtime'] = pd.to_datetime(trades.time, unit='s')
-        trades.sort_values('dtime', ascending=False, inplace=True)
+        trades.sort_values('dtime', ascending=ascending, inplace=True)
         trades.set_index('dtime', inplace=True)
 
         # dtypes
@@ -671,7 +683,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('other')
-    def get_recent_spread_data(self, pair, since=None):
+    def get_recent_spread_data(self, pair, since=None, ascending=False):
         """Get recent spread data.
 
         Return a ``pd.DataFrame`` of recent spread data for a given pair,
@@ -685,6 +697,10 @@ class KrakenAPI(object):
         since : int, optional (default=None)
             Return spread data since given unixtime (inclusive). If
             None, retrieve from earliest time possible.
+        
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -735,7 +751,7 @@ class KrakenAPI(object):
 
         # time
         spread['dtime'] = pd.to_datetime(spread.time, unit='s')
-        spread.sort_values('dtime', ascending=False, inplace=True)
+        spread.sort_values('dtime', ascending=ascending, inplace=True)
         spread.set_index('dtime', inplace=True)
 
         # spread
@@ -1122,7 +1138,7 @@ class KrakenAPI(object):
     @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_trades_history(self, type='all', trades=False, start=None,
-                           end=None, ofs=None, otp=None):
+                           end=None, ofs=None, otp=None, ascending=False):
         """Get trades history.
 
         Return a ``pd.DataFrame`` of the trade history.
@@ -1152,6 +1168,10 @@ class KrakenAPI(object):
 
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
+       
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -1227,7 +1247,7 @@ class KrakenAPI(object):
 
         # append datetime, sort by it
         trades['dtime'] = pd.to_datetime(trades.time, unit='s')
-        trades.sort_values('dtime', ascending=False, inplace=True)
+        trades.sort_values('dtime', ascending=ascending, inplace=True)
         trades.set_index('dtime', inplace=True)
 
         # set dtypes
@@ -1241,7 +1261,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('ledger/trade history')
-    def query_trades_info(self, txid, trades=False, otp=None):
+    def query_trades_info(self, txid, trades=False, otp=None, ascending=False):
         """Query trades info.
 
         Return a ``pd.DataFrame`` of trades info.
@@ -1257,6 +1277,10 @@ class KrakenAPI(object):
 
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
+        
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -1294,7 +1318,7 @@ class KrakenAPI(object):
 
         # append datetime, sort by it
         trades['dtime'] = pd.to_datetime(trades.time, unit='s')
-        trades.sort_values('dtime', ascending=False, inplace=True)
+        trades.sort_values('dtime', ascending=ascending, inplace=True)
         trades.set_index('dtime', inplace=True)
 
         # set dtypes
@@ -1384,7 +1408,7 @@ class KrakenAPI(object):
     @crl_sleep
     @callratelimiter('ledger/trade history')
     def get_ledgers_info(self, aclass=None, asset=None, type='all', start=None,
-                         end=None, ofs=None, otp=None):
+                         end=None, ofs=None, otp=None, ascending=False):
         """Get ledgers info.
 
         Return a ``pd.DataFrame`` of ledgers info.
@@ -1413,6 +1437,10 @@ class KrakenAPI(object):
 
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
+
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -1465,7 +1493,7 @@ class KrakenAPI(object):
 
         # append datetime, sort by it
         ledgers['dtime'] = pd.to_datetime(ledgers.time, unit='s')
-        ledgers.sort_values('dtime', ascending=False, inplace=True)
+        ledgers.sort_values('dtime', ascending=ascending, inplace=True)
         ledgers.set_index('dtime', inplace=True)
 
         # dtypes
@@ -1480,7 +1508,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('ledger/trade history')
-    def query_ledgers(self, id, otp=None):
+    def query_ledgers(self, id, otp=None, ascending=False):
         """Query ledgers info.
 
         Return a ``pd.DataFrame`` of ledgers info.
@@ -1493,6 +1521,10 @@ class KrakenAPI(object):
 
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
+
+        ascending : bool, optional (default=False)
+            If set to true, the data frame will be sorted with the most recent date in the last position. 
+            When set to false, the most recent date is in the first position.
 
         Returns
         -------
@@ -1530,7 +1562,7 @@ class KrakenAPI(object):
 
         # append datetime, sort by it
         ledgers['dtime'] = pd.to_datetime(ledgers.time, unit='s')
-        ledgers.sort_values('dtime', ascending=False, inplace=True)
+        ledgers.sort_values('dtime', ascending=ascending, inplace=True)
         ledgers.set_index('dtime', inplace=True)
 
         # dtypes
