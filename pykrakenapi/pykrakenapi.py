@@ -1650,9 +1650,7 @@ class KrakenAPI(object):
                            close_ordertype=None, close_price=None,
                            close_price2=None, otp=None,
                            trading_agreement='agree'):
-        """UNTESTED!
-
-        Add a standard order.
+        """Add a standard order.
 
         Add a standard order and return an order description info and an array
         of transaction ids for the order (if succesfull).
