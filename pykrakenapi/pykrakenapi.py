@@ -1059,20 +1059,24 @@ class KrakenAPI(object):
 
         # create dataframe
         closed = pd.DataFrame(res['result']['closed']).T
-        descr = closed.descr.apply(pd.Series)
-        descr.columns = ['descr_{}'.format(col) for col in descr.columns]
-        del closed['descr']
-        closed = pd.concat((closed, descr), axis=1)
-        for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
-            closed.loc[:, col] = closed[col].astype(int)
-        for col in ['cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price',
-                    'descr_price2']:
-            closed.loc[:, col] = closed[col].astype(float)
-
-        # count
-        count = res['result']['count']
-
-        return closed, count
+        
+        if closed.empty:
+            return closed, 0
+        else:
+            descr = closed.descr.apply(pd.Series)
+            descr.columns = ['descr_{}'.format(col) for col in descr.columns]
+            del closed['descr']
+            closed = pd.concat((closed, descr), axis=1)
+            for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
+                closed.loc[:, col] = closed[col].astype(int)
+            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price',
+                        'descr_price2']:
+                closed.loc[:, col] = closed[col].astype(float)
+    
+            # count
+            count = res['result']['count']
+    
+            return closed, count
 
     @crl_sleep
     @callratelimiter('other')
