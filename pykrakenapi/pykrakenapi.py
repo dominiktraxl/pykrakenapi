@@ -801,8 +801,12 @@ class KrakenAPI(object):
 
         """
 
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
         # query
-        res = self.api.query_private('Balance')
+        res = self.api.query_private('Balance', data=data)
 
         # check for error
         if len(res['error']) > 0:
