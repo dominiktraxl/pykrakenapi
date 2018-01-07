@@ -1063,7 +1063,7 @@ class KrakenAPI(object):
 
         # create dataframe
         closed = pd.DataFrame(res['result']['closed']).T
-        
+
         if closed.empty:
             return closed, 0
         else:
@@ -1073,13 +1073,13 @@ class KrakenAPI(object):
             closed = pd.concat((closed, descr), axis=1)
             for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
                 closed.loc[:, col] = closed[col].astype(int)
-            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price',
-                        'descr_price2']:
+            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
+                        'descr_price', 'descr_price2']:
                 closed.loc[:, col] = closed[col].astype(float)
-    
+
             # count
             count = res['result']['count']
-    
+
             return closed, count
 
     @crl_sleep
