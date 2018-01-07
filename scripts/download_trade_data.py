@@ -88,7 +88,7 @@ class GetTradeData(object):
         trades.loc[:, 'cost'] = trades.price * trades.volume
 
         # store on disc
-        fname = self.folder + self.pair + '.pickle'
+        fname = self.folder + self.pair + '_trades.pickle'
         print('\n storing', fname)
         trades.to_pickle(fname)
 
