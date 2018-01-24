@@ -67,7 +67,7 @@ class GetTradeData(object):
                 print('storing', fname)
                 trades.to_pickle(fname)
 
-            except ValueError:
+            except AttributeError:  # can't tz_localize on empty (last) trades
                 print('\n download/update finished!')
                 break
 
