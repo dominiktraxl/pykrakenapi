@@ -501,19 +501,24 @@ class KrakenAPI(object):
         ohlc = pd.DataFrame(res['result'][pair])
         last = res['result']['last']
 
-        # set time, column names
-        ohlc.columns = [
-            'time', 'open', 'high', 'low', 'close', 'vwap', 'volume', 'count'
-        ]
-        ohlc['dtime'] = pd.to_datetime(ohlc.time, unit='s')
-        ohlc.sort_values('dtime', ascending=ascending, inplace=True)
-        ohlc.set_index('dtime', inplace=True)
+        if ohlc.empty:
+            return ohlc, last
 
-        # dtypes
-        for col in ['open', 'high', 'low', 'close', 'vwap', 'volume']:
-            ohlc.loc[:, col] = ohlc[col].astype(float)
+        else:
+            # set time, column names
+            ohlc.columns = [
+                'time', 'open', 'high', 'low', 'close',
+                'vwap', 'volume', 'count',
+            ]
+            ohlc['dtime'] = pd.to_datetime(ohlc.time, unit='s')
+            ohlc.sort_values('dtime', ascending=ascending, inplace=True)
+            ohlc.set_index('dtime', inplace=True)
 
-        return ohlc, last
+            # dtypes
+            for col in ['open', 'high', 'low', 'close', 'vwap', 'volume']:
+                ohlc.loc[:, col] = ohlc[col].astype(float)
+
+            return ohlc, last
 
     @crl_sleep
     @callratelimiter('other')
@@ -582,20 +587,18 @@ class KrakenAPI(object):
 
         # column names
         cols = ['price', 'volume', 'time']
-        asks.columns = cols
-        bids.columns = cols
 
-        # set datetime
-        asks['dtime'] = pd.to_datetime(asks.time, unit='s')
-        bids['dtime'] = pd.to_datetime(bids.time, unit='s')
+        if not asks.empty:
+            asks.columns = cols
+            asks['dtime'] = pd.to_datetime(asks.time, unit='s')
+            asks.sort_values('dtime', ascending=ascending, inplace=True)
+            asks.set_index('dtime', inplace=True)
 
-        # sort by time
-        asks.sort_values('dtime', ascending=ascending, inplace=True)
-        bids.sort_values('dtime', ascending=ascending, inplace=True)
-
-        # set index
-        asks.set_index('dtime', inplace=True)
-        bids.set_index('dtime', inplace=True)
+        if not bids.emtpy:
+            bids.columns = cols
+            bids['dtime'] = pd.to_datetime(bids.time, unit='s')
+            bids.sort_values('dtime', ascending=ascending, inplace=True)
+            bids.set_index('dtime', inplace=True)
 
         return asks, bids
 
@@ -662,25 +665,28 @@ class KrakenAPI(object):
 
         # create dataframe
         trades = pd.DataFrame(res['result'][pair])
-        trades.columns = [
-            'price', 'volume', 'time', 'buy_sell', 'market_limit', 'misc'
-        ]
-        trades.buy_sell.replace('b', 'buy', inplace=True)
-        trades.buy_sell.replace('s', 'sell', inplace=True)
-        trades.market_limit.replace('l', 'limit', inplace=True)
-        trades.market_limit.replace('m', 'market', inplace=True)
-
-        # time
-        trades['dtime'] = pd.to_datetime(trades.time, unit='s')
-        trades.sort_values('dtime', ascending=ascending, inplace=True)
-        trades.set_index('dtime', inplace=True)
-
-        # dtypes
-        for col in ['price', 'volume']:
-            trades.loc[:, col] = trades[col].astype(float)
 
         # last timestamp
         last = int(res['result']['last'])
+
+        if not trades.empty:
+
+            trades.columns = [
+                'price', 'volume', 'time', 'buy_sell', 'market_limit', 'misc'
+            ]
+            trades.buy_sell.replace('b', 'buy', inplace=True)
+            trades.buy_sell.replace('s', 'sell', inplace=True)
+            trades.market_limit.replace('l', 'limit', inplace=True)
+            trades.market_limit.replace('m', 'market', inplace=True)
+
+            # time
+            trades['dtime'] = pd.to_datetime(trades.time, unit='s')
+            trades.sort_values('dtime', ascending=ascending, inplace=True)
+            trades.set_index('dtime', inplace=True)
+
+            # dtypes
+            for col in ['price', 'volume']:
+                trades.loc[:, col] = trades[col].astype(float)
 
         return trades, last
 
@@ -751,20 +757,23 @@ class KrakenAPI(object):
 
         # create dataframe
         spread = pd.DataFrame(res['result'][pair])
-        spread.columns = ['time', 'bid', 'ask']
-
-        # time
-        spread['dtime'] = pd.to_datetime(spread.time, unit='s')
-        spread.sort_values('dtime', ascending=ascending, inplace=True)
-        spread.set_index('dtime', inplace=True)
-
-        # spread
-        spread.loc[:, 'bid'] = spread.bid.astype(float)
-        spread.loc[:, 'ask'] = spread.ask.astype(float)
-        spread['spread'] = spread.ask - spread.bid
 
         # last timestamp
         last = int(res['result']['last'])
+
+        if not spread.empty:
+
+            spread.columns = ['time', 'bid', 'ask']
+
+            # time
+            spread['dtime'] = pd.to_datetime(spread.time, unit='s')
+            spread.sort_values('dtime', ascending=ascending, inplace=True)
+            spread.set_index('dtime', inplace=True)
+
+            # spread
+            spread.loc[:, 'bid'] = spread.bid.astype(float)
+            spread.loc[:, 'ask'] = spread.ask.astype(float)
+            spread['spread'] = spread.ask - spread.bid
 
         return spread, last
 
@@ -814,7 +823,9 @@ class KrakenAPI(object):
 
         # create dataframe
         balance = pd.DataFrame(index=['vol'], data=res['result']).T
-        balance.loc[:, 'vol'] = balance.vol.astype(float)
+
+        if not balance.empty:
+            balance.loc[:, 'vol'] = balance.vol.astype(float)
 
         return balance
 
@@ -882,7 +893,9 @@ class KrakenAPI(object):
 
         # create dataframe
         tradebalance = pd.DataFrame(index=[asset], data=res['result']).T
-        tradebalance.loc[:, asset] = tradebalance[asset].astype(float)
+
+        if not tradebalance.empty:
+            tradebalance.loc[:, asset] = tradebalance[asset].astype(float)
 
         return tradebalance
 
@@ -1064,9 +1077,11 @@ class KrakenAPI(object):
         # create dataframe
         closed = pd.DataFrame(res['result']['closed']).T
 
-        if closed.empty:
-            return closed, 0
-        else:
+        # count
+        count = res['result']['count']
+
+        if not closed.empty:
+
             descr = closed.descr.apply(pd.Series)
             descr.columns = ['descr_{}'.format(col) for col in descr.columns]
             del closed['descr']
@@ -1077,10 +1092,7 @@ class KrakenAPI(object):
                         'descr_price', 'descr_price2']:
                 closed.loc[:, col] = closed[col].astype(float)
 
-            # count
-            count = res['result']['count']
-
-            return closed, count
+        return closed, count
 
     @crl_sleep
     @callratelimiter('other')
@@ -1135,15 +1147,18 @@ class KrakenAPI(object):
 
         # create dataframe
         orders = pd.DataFrame(res['result']).T
-        descr = orders.descr.apply(pd.Series)
-        descr.columns = ['descr_{}'.format(col) for col in descr.columns]
-        del orders['descr']
-        orders = pd.concat((orders, descr), axis=1)
-        for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
-            orders.loc[:, col] = orders[col].astype(int)
-        for col in ['cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price',
-                    'descr_price2']:
-            orders.loc[:, col] = orders[col].astype(float)
+
+        if not orders.empty:
+
+            descr = orders.descr.apply(pd.Series)
+            descr.columns = ['descr_{}'.format(col) for col in descr.columns]
+            del orders['descr']
+            orders = pd.concat((orders, descr), axis=1)
+            for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
+                orders.loc[:, col] = orders[col].astype(int)
+            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
+                        'descr_price', 'descr_price2']:
+                orders.loc[:, col] = orders[col].astype(float)
 
         return orders
 
@@ -1255,20 +1270,23 @@ class KrakenAPI(object):
 
         # create dataframe
         trades = pd.DataFrame(res['result']['trades']).T
-        trades.index.name = 'txid'
-        trades.reset_index(inplace=True)
-
-        # append datetime, sort by it
-        trades['dtime'] = pd.to_datetime(trades.time, unit='s')
-        trades.sort_values('dtime', ascending=ascending, inplace=True)
-        trades.set_index('dtime', inplace=True)
-
-        # set dtypes
-        for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']:
-            trades.loc[:, col] = trades[col].astype(float)
 
         # count
         count = res['result']['count']
+
+        if not trades.empty:
+
+            trades.index.name = 'txid'
+            trades.reset_index(inplace=True)
+
+            # append datetime, sort by it
+            trades['dtime'] = pd.to_datetime(trades.time, unit='s')
+            trades.sort_values('dtime', ascending=ascending, inplace=True)
+            trades.set_index('dtime', inplace=True)
+
+            # set dtypes
+            for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']:
+                trades.loc[:, col] = trades[col].astype(float)
 
         return trades, count
 
@@ -1327,17 +1345,20 @@ class KrakenAPI(object):
 
         # create dataframe
         trades = pd.DataFrame(res['result']).T
-        trades.index.name = 'txid'
-        trades.reset_index(inplace=True)
 
-        # append datetime, sort by it
-        trades['dtime'] = pd.to_datetime(trades.time, unit='s')
-        trades.sort_values('dtime', ascending=ascending, inplace=True)
-        trades.set_index('dtime', inplace=True)
+        if not trades.empty:
 
-        # set dtypes
-        for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']:
-            trades.loc[:, col] = trades[col].astype(float)
+            trades.index.name = 'txid'
+            trades.reset_index(inplace=True)
+
+            # append datetime, sort by it
+            trades['dtime'] = pd.to_datetime(trades.time, unit='s')
+            trades.sort_values('dtime', ascending=ascending, inplace=True)
+            trades.set_index('dtime', inplace=True)
+
+            # set dtypes
+            for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']:
+                trades.loc[:, col] = trades[col].astype(float)
 
         return trades
 
@@ -1503,21 +1524,24 @@ class KrakenAPI(object):
 
         # create dataframe
         ledgers = pd.DataFrame(res['result']['ledger']).T
-        ledgers.index.name = 'ledger_id'
-        ledgers.reset_index(inplace=True)
-
-        # append datetime, sort by it
-        ledgers['dtime'] = pd.to_datetime(ledgers.time, unit='s')
-        ledgers.sort_values('dtime', ascending=ascending, inplace=True)
-        ledgers.set_index('dtime', inplace=True)
-
-        # dtypes
-        for col in ['amount', 'balance', 'fee']:
-            ledgers.loc[:, col] = ledgers[col].astype(float)
-        ledgers.loc[:, 'time'] = ledgers.time.astype(int)
 
         # count
         count = res['result']['count']
+
+        if not ledgers.empty:
+
+            ledgers.index.name = 'ledger_id'
+            ledgers.reset_index(inplace=True)
+
+            # append datetime, sort by it
+            ledgers['dtime'] = pd.to_datetime(ledgers.time, unit='s')
+            ledgers.sort_values('dtime', ascending=ascending, inplace=True)
+            ledgers.set_index('dtime', inplace=True)
+
+            # dtypes
+            for col in ['amount', 'balance', 'fee']:
+                ledgers.loc[:, col] = ledgers[col].astype(float)
+            ledgers.loc[:, 'time'] = ledgers.time.astype(int)
 
         return ledgers, count
 
@@ -1573,18 +1597,21 @@ class KrakenAPI(object):
 
         # create dataframe
         ledgers = pd.DataFrame(res['result']).T
-        ledgers.index.name = 'ledger_id'
-        ledgers.reset_index(inplace=True)
 
-        # append datetime, sort by it
-        ledgers['dtime'] = pd.to_datetime(ledgers.time, unit='s')
-        ledgers.sort_values('dtime', ascending=ascending, inplace=True)
-        ledgers.set_index('dtime', inplace=True)
+        if not ledgers.empty:
 
-        # dtypes
-        for col in ['amount', 'balance', 'fee']:
-            ledgers.loc[:, col] = ledgers[col].astype(float)
-        ledgers.loc[:, 'time'] = ledgers.time.astype(int)
+            ledgers.index.name = 'ledger_id'
+            ledgers.reset_index(inplace=True)
+
+            # append datetime, sort by it
+            ledgers['dtime'] = pd.to_datetime(ledgers.time, unit='s')
+            ledgers.sort_values('dtime', ascending=ascending, inplace=True)
+            ledgers.set_index('dtime', inplace=True)
+
+            # dtypes
+            for col in ['amount', 'balance', 'fee']:
+                ledgers.loc[:, col] = ledgers[col].astype(float)
+            ledgers.loc[:, 'time'] = ledgers.time.astype(int)
 
         return ledgers
 
