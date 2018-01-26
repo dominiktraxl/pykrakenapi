@@ -594,7 +594,7 @@ class KrakenAPI(object):
             asks.sort_values('dtime', ascending=ascending, inplace=True)
             asks.set_index('dtime', inplace=True)
 
-        if not bids.emtpy:
+        if not bids.empty:
             bids.columns = cols
             bids['dtime'] = pd.to_datetime(bids.time, unit='s')
             bids.sort_values('dtime', ascending=ascending, inplace=True)
