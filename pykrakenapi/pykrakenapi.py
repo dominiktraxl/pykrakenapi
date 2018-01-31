@@ -902,8 +902,7 @@ class KrakenAPI(object):
     @crl_sleep
     @callratelimiter('other')
     def get_open_orders(self, trades=False, userref=None, otp=None):
-        """UNTESTED!
-
+        """
         Get open orders info.
 
         Return a dictionary of open orders info.
@@ -921,7 +920,7 @@ class KrakenAPI(object):
 
         Returns
         -------
-        tradebalance : dict
+        open : pd.DataFrame
             refid = Referral order transaction id that created this order
             userref = user reference id
             status = status of order:
@@ -999,7 +998,18 @@ class KrakenAPI(object):
             raise KrakenAPIError(res['error'])
 
         # create dataframe
-        openorders = res['result']
+        openorders = pd.DataFrame(res['result']['open']).T
+
+        if not openorders.empty:
+            descr = openorders.descr.apply(pd.Series)
+            descr.columns = ['descr_{}'.format(col) for col in descr.columns]
+            del openorders['descr']
+            openorders = pd.concat((openorders, descr), axis=1)
+            for col in ['expiretm', 'opentm', 'starttm']:
+                openorders.loc[:, col] = openorders[col].astype(int)
+            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
+                        'descr_price', 'descr_price2']:
+                openorders.loc[:, col] = openorders[col].astype(float)
 
         return openorders
 
