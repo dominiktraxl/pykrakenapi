@@ -1897,7 +1897,7 @@ class KrakenAPI(object):
 
         Parameters
         ----------
-        txid : int
+        txid : str
             Transaction id.
 
         otp : str
