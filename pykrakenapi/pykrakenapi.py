@@ -1881,13 +1881,13 @@ class KrakenAPI(object):
 
         # This little hack fixes the problem with [ ]
         if "close_ordertype" in data:
-            data["close[ordertype]"] = data["close_ordertype"]
+            data["close[ordertype]"] = data.pop("close_ordertype")
 
         if "close_price" in data:
-            data["close[price]"] = data["close_price"]
+            data["close[price]"] = data.pop("close_price")
 
         if "close_price2" in data:
-            data["close[price2]"] = data["close_price2"]
+            data["close[price2]"] = data.pop("close_price2")
 
         # query
         res = self.api.query_private('AddOrder', data=data)
