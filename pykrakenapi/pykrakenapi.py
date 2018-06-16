@@ -1879,6 +1879,16 @@ class KrakenAPI(object):
         data = {arg: value for arg, value in locals().items() if
                 arg != 'self' and value is not None}
 
+        # This little hack fixes the problem with [ ]
+        if "close_ordertype" in data:
+            data["close[ordertype]"] = data["close_ordertype"]
+
+        if "close_price" in data:
+            data["close[price]"] = data["close_price"]
+
+        if "close_price2" in data:
+            data["close[price2]"] = data["close_price2"]
+
         # query
         res = self.api.query_private('AddOrder', data=data)
 
