@@ -75,7 +75,7 @@ def callratelimiter(query_type):
 
             self = args[0]
 
-            # public API has a independent counter system
+            # public API has an independent counter system
             if query_type == 'public':
                 now = datetime.datetime.now()
                 lapse = int((now - self.time_of_last_public_query).microseconds)
@@ -204,7 +204,7 @@ class KrakenAPI(object):
         self.crl_sleep = crl_sleep
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_server_time(self):
         """Get server time.
 
@@ -245,7 +245,7 @@ class KrakenAPI(object):
         return dt, unixtime
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_asset_info(self, info=None, aclass=None, asset=None):
         """Get asset info.
 
@@ -302,7 +302,7 @@ class KrakenAPI(object):
         return assets
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_tradable_asset_pairs(self, info=None, pair=None):
         """Get tradable asset pairs.
 
@@ -377,7 +377,7 @@ class KrakenAPI(object):
         return pairs
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_ticker_information(self, pair):
         """Get ticker information.
 
@@ -436,7 +436,7 @@ class KrakenAPI(object):
         return ticker
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_ohlc_data(self, pair, interval=1, since=None, ascending=False):
         """Get ohlc data for a given pair.
 
@@ -532,7 +532,7 @@ class KrakenAPI(object):
             return ohlc, last
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_order_book(self, pair, count=100, ascending=False):
         """Get order book (market depth).
 
@@ -614,7 +614,7 @@ class KrakenAPI(object):
         return asks, bids
 
     @crl_sleep
-    @callratelimiter('ledger/trade history')
+    @callratelimiter('public')
     def get_recent_trades(self, pair, since=None, ascending=False):
         """Get recent trades data.
 
@@ -702,7 +702,7 @@ class KrakenAPI(object):
         return trades, last
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('public')
     def get_recent_spread_data(self, pair, since=None, ascending=False):
         """Get recent spread data.
 
