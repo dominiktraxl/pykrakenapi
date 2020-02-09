@@ -78,13 +78,14 @@ def callratelimiter(query_type):
             # public API has an independent counter system
             if query_type == 'public':
                 now = datetime.datetime.now()
-                lapse = int((now - self.time_of_last_public_query).microseconds)
+                lapse = (now - self.time_of_last_public_query).total_seconds()
                 self.time_of_last_public_query = now
-                if lapse < 1000000:
+                if lapse < 1.0:
                     msg = "public call frequency exceeded (seconds={})"
-                    msg = msg.format(str(lapse / 1000000))
+                    msg = msg.format(str(lapse))
                     raise CallRateLimitError(msg)
-                return
+                result = func(*args, **kwargs)
+                return result
 
             # determine increment
             if query_type == 'ledger/trade history':
