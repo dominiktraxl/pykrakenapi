@@ -79,12 +79,13 @@ def callratelimiter(query_type):
             if query_type == 'public':
                 now = datetime.datetime.now()
                 lapse = (now - self.time_of_last_public_query).total_seconds()
-                self.time_of_last_public_query = now
                 if lapse < 1.0:
                     msg = "public call frequency exceeded (seconds={})"
                     msg = msg.format(str(lapse))
                     raise CallRateLimitError(msg)
 
+                now = datetime.datetime.now()
+                self.time_of_last_public_query = now
                 # no retries
                 if self.retry == 0:
                     result = func(*args, **kwargs)
@@ -102,6 +103,8 @@ def callratelimiter(query_type):
                                 str(attempt).zfill(3)), err)
                             attempt += 1
                             time.sleep(retry)
+                            now = datetime.datetime.now()
+                            self.time_of_last_public_query = now
                             continue
 
             # privat API, determine increment
