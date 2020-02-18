@@ -11,7 +11,7 @@ class TestPykrakenapi(unittest.TestCase):
         pyApi = KrakenAPI(raw_api, crl_sleep=0)
 
         # check api calls with frequency lower than 1/1s
-        time.sleep(1)
+        time.sleep(1.1)
         ldt, lut = pyApi.get_server_time()
         for i in range(5):
             time.sleep(1.1)
@@ -21,10 +21,8 @@ class TestPykrakenapi(unittest.TestCase):
             lut = ut
 
         # check api calls with frequency higher than 1/1s
-        for i in range(5):
-            with self.assertRaises(CallRateLimitError):
-                time.sleep(0.05)
-                dt, ut = pyApi.get_server_time()
+        with self.assertRaises(CallRateLimitError):
+            dt, ut = pyApi.get_server_time()
 
 
 if __name__ == '__main__':
