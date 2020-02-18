@@ -75,7 +75,7 @@ def callratelimiter(query_type):
 
             self = args[0]
 
-            # public API has an independent counter system
+            # public API, with an independent counter system
             if query_type == 'public':
                 now = datetime.datetime.now()
                 lapse = (now - self.time_of_last_public_query).total_seconds()
@@ -84,10 +84,27 @@ def callratelimiter(query_type):
                     msg = "public call frequency exceeded (seconds={})"
                     msg = msg.format(str(lapse))
                     raise CallRateLimitError(msg)
-                result = func(*args, **kwargs)
-                return result
 
-            # determine increment
+                # no retries
+                if self.retry == 0:
+                    result = func(*args, **kwargs)
+                    return result
+                # do retries
+                else:
+                    retry = max(self.retry, 1.05)
+                    attempt = 0
+                    while True:
+                        try:
+                            result = func(*args, **kwargs)
+                            return result
+                        except (HTTPError, KrakenAPIError) as err:
+                            print('attempt: {} |'.format(
+                                str(attempt).zfill(3)), err)
+                            attempt += 1
+                            time.sleep(retry)
+                            continue
+
+            # privat API, determine increment
             if query_type == 'ledger/trade history':
                 incr = 2
             elif query_type == 'other':
@@ -177,12 +194,14 @@ class KrakenAPI(object):
 
     """
 
-    def __init__(self, api, tier='Intermediate', retry=.5, crl_sleep=5):
+    def __init__(self, api, tier='Intermediate', retry=1, crl_sleep=5):
 
         self.api = api
 
         # api call rate limiter
-        self.time_of_last_public_query = self.time_of_last_query = datetime.datetime.now()
+        self.time_of_last_public_query = datetime.datetime.now()
+        self.time_of_last_query = datetime.datetime.now()
+
         self.api_counter = 0
 
         if tier == 'None':
@@ -1027,7 +1046,7 @@ class KrakenAPI(object):
         return openorders
 
     @crl_sleep
-    @callratelimiter('other')
+    @callratelimiter('ledger/trade history')
     def get_closed_orders(self, trades=False, userref=None, start=None,
                           end=None, ofs=None, closetime=None, otp=None):
         """Get closed orders info.
