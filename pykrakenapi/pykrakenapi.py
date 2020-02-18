@@ -140,11 +140,12 @@ class KrakenAPI(object):
         An instance of the krakenex.API class. A reference to the input
         is created and accessible via ``KrakenAPI.api``.
 
-    tier : int, optional (default=3)
+    tier : str, optional (default='Intermediate')
         Your Kraken tier level, used to adjust the limit of the call rate to
-        the Kraken API in order to prevent 15 minute temporary lockouts. See
-        https://support.kraken.com/hc/en-us/articles/206548367.
-        Set tier=0 to disable the call rate limiter.
+        the Kraken API in order to prevent 15 minute temporary lockouts.
+        Must be one of {'None', 'Starter', 'Intermediate', 'Pro'}.
+        Set tier='None' to disable the call rate limiter.
+        See https://support.kraken.com/hc/en-us/articles/206548367.
 
     retry : float, optional (default=.5)
         Sleep for ``retry`` seconds after an HTTPError/KrakenAPIError occurred
@@ -164,7 +165,7 @@ class KrakenAPI(object):
 
     """
 
-    def __init__(self, api, tier=3, retry=.5, crl_sleep=5):
+    def __init__(self, api, tier='Intermediate', retry=.5, crl_sleep=5):
 
         self.api = api
 
@@ -172,19 +173,19 @@ class KrakenAPI(object):
         self.time_of_last_query = datetime.datetime.now()
         self.api_counter = 0
 
-        if tier == 0:
+        if tier == 'None':
             self.limit = float('inf')
             self.factor = 3  # does not matter
 
-        elif tier == 2:
+        elif tier == 'Starter':
             self.limit = 15
             self.factor = 3  # down by 1 every three seconds
 
-        elif tier == 3:
+        elif tier == 'Intermediate':
             self.limit = 20
             self.factor = 2  # down by 1 every two seconds
 
-        elif tier == 4:
+        elif tier == 'Pro':
             self.limit = 20
             self.factor = 1  # down by 1 every one second
 
