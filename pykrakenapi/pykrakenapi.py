@@ -77,12 +77,13 @@ def callratelimiter(query_type):
 
             # public API, with an independent counter system
             if query_type == 'public':
-                now = datetime.datetime.now()
-                lapse = (now - self.time_of_last_public_query).total_seconds()
-                if lapse < 1.0:
-                    msg = "public call frequency exceeded (seconds={})"
-                    msg = msg.format(str(lapse))
-                    raise CallRateLimitError(msg)
+                if self.time_of_last_public_query is not None:
+                    now = datetime.datetime.now()
+                    lapse = (now - self.time_of_last_public_query).total_seconds()
+                    if lapse < 1.0:
+                        msg = "public call frequency exceeded (seconds={})"
+                        msg = msg.format(str(lapse))
+                        raise CallRateLimitError(msg)
 
                 now = datetime.datetime.now()
                 self.time_of_last_public_query = now
@@ -202,7 +203,7 @@ class KrakenAPI(object):
         self.api = api
 
         # api call rate limiter
-        self.time_of_last_public_query = datetime.datetime.now()
+        self.time_of_last_public_query = None
         self.time_of_last_query = datetime.datetime.now()
 
         self.api_counter = 0
