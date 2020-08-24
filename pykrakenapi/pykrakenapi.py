@@ -534,6 +534,7 @@ class KrakenAPI(object):
             raise KrakenAPIError(res['error'])
 
         # create dataframe
+        pair = list(res['result'].keys())[0]
         ohlc = pd.DataFrame(res['result'][pair])
         last = res['result']['last']
 
@@ -700,6 +701,7 @@ class KrakenAPI(object):
             raise KrakenAPIError(res['error'])
 
         # create dataframe
+        pair = list(res['result'].keys())[0]
         trades = pd.DataFrame(res['result'][pair])
 
         # last timestamp
@@ -792,6 +794,7 @@ class KrakenAPI(object):
             raise KrakenAPIError(res['error'])
 
         # create dataframe
+        pair = list(res['result'].keys())[0]
         spread = pd.DataFrame(res['result'][pair])
 
         # last timestamp
