@@ -72,7 +72,7 @@ from __future__ import absolute_import
 from pykrakenapi.pykrakenapi import KrakenAPI
 
 __all__ = ['KrakenAPI']
-__version__ = '0.1.8'
+__version__ = '0.1.9'
 __author__ = "Dominik Traxl <dominik.traxl@posteo.org>"
 __copyright__ = "Copyright 2017 Dominik Traxl"
 __license__ = "GNU GPL"
