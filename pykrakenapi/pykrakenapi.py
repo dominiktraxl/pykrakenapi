@@ -1205,7 +1205,7 @@ class KrakenAPI(object):
             orders = pd.concat((orders, descr), axis=1)
             for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
                 if col in orders:
-                    orders.loc[:, col] = orders[col].astype(int)
+                    orders.loc[:, col] = orders[col].astype(float)
             for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
                         'descr_price', 'descr_price2']:
                 orders.loc[:, col] = orders[col].astype(float)
