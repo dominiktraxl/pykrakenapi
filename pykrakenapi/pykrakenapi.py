@@ -286,8 +286,8 @@ class KrakenAPI(object):
                 limit_only (existing orders are cancelable, and only new limit orders can be submitted)
                 maintenance (system is offline for maintenance)
 
-        timestamp : str
-            The timestamp in ISO 8601 yyyy-mm-ddthhmmssz format.
+        timestamp : pandas._libs.tslib.Timestamp
+            The server's datetime.
 
         Raises
         ------
@@ -311,7 +311,7 @@ class KrakenAPI(object):
 
         # extract results
         status = res['result']['status']
-        timestamp = res['result']['timestamp']
+        timestamp = pd.to_datetime(res['result']['timestamp'])
 
         return status, timestamp    
     
