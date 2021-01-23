@@ -271,6 +271,52 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('public')
+    def get_system_status(self):
+        """Get system status.
+
+        Return the Kraken system status.
+
+        Returns
+        -------
+        status : str
+            The systems status. Possible status values include:
+                online (operational, full trading available)
+                cancel_only (existing orders are cancelable, but new orders cannot be created)
+                post_only (existing orders are cancelable, and only new post limit orders can be submitted)
+                limit_only (existing orders are cancelable, and only new limit orders can be submitted)
+                maintenance (system is offline for maintenance)
+
+        timestamp : str
+            The timestamp in ISO 8601 yyyy-mm-ddthhmmssz format.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # query
+        res = self.api.query_public('SystemStatus')
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # extract results
+        status = res['result']['status']
+        timestamp = res['result']['timestamp']
+
+        return status, timestamp    
+    
+    @crl_sleep
+    @callratelimiter('public')
     def get_asset_info(self, info=None, aclass=None, asset=None):
         """Get asset info.
 
