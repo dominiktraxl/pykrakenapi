@@ -85,7 +85,7 @@ FAQ
 
 In order to have your order executed, try with `validate=None`. This is :
 
-```k.add_standard_order(pair="ATOMXBT", type="buy", ordertype="limit", volume="420.0", price="0.00042", validate=None)```
+>>> k.add_standard_order(pair="ATOMXBT", type="buy", ordertype="limit", volume="420.0", price="0.00042", validate=None)
 
 
 Development
