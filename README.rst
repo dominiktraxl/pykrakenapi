@@ -77,12 +77,15 @@ See the docstrings of the methods of the KrakenAPI class.
 FAQ
 ---
 
-- Why is my order not executed ? Why can't I see my order in Kraken ?
+# Why is my order not executed ? Why can't I see my order in Kraken ?
+
 "Add standard order" gives us an OPTIONAL feature that is :
 _validate = validate inputs only.  do not submit order (optional)_
-This optional feature is *DEFAULTED TO YES* here.
+
+*This optional feature is *DEFAULTED TO YES* here.*
+
 In order to have your order executed, try with `validate=None`.
-a.k.a `k.add_standard_order(pair="ATOMXBT", type="buy", ordertype="limit", volume="420.0", price="0.00042", validate=None)`
+a.k.a ```k.add_standard_order(pair="ATOMXBT", type="buy", ordertype="limit", volume="420.0", price="0.00042", validate=None)```
 
 
 Development
