@@ -77,7 +77,7 @@ See the docstrings of the methods of the KrakenAPI class.
 FAQ
 ---
 
-# Why is my order not executed ? Why can't I see my order in Kraken ?
+* **Why is my order not executed ? Why can't I see my order in Kraken ?**
 
 "Add standard order" enables an OPTIONAL feature "validate" that is : *validate = validate inputs only.  do not submit order (optional)*
 
