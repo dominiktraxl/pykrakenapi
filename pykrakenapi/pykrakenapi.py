@@ -281,9 +281,12 @@ class KrakenAPI(object):
         status : str
             The systems status. Possible status values include:
                 online (operational, full trading available)
-                cancel_only (existing orders are cancelable, but new orders cannot be created)
-                post_only (existing orders are cancelable, and only new post limit orders can be submitted)
-                limit_only (existing orders are cancelable, and only new limit orders can be submitted)
+                cancel_only (existing orders are cancelable, but new orders
+                    cannot be created)
+                post_only (existing orders are cancelable, and only new post
+                    limit orders can be submitted)
+                limit_only (existing orders are cancelable, and only new limit
+                    orders can be submitted)
                 maintenance (system is offline for maintenance)
 
         timestamp : pandas._libs.tslib.Timestamp
@@ -313,8 +316,8 @@ class KrakenAPI(object):
         status = res['result']['status']
         timestamp = pd.to_datetime(res['result']['timestamp'])
 
-        return status, timestamp    
-    
+        return status, timestamp
+
     @crl_sleep
     @callratelimiter('public')
     def get_asset_info(self, info=None, aclass=None, asset=None):
