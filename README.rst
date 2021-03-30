@@ -74,14 +74,19 @@ See the docstrings of the methods of the KrakenAPI class.
 >>> from pykrakenapi import KrakenAPI
 >>> help(KrakenAPI)
 
+
 FAQ
 ---
 
-* **Why is my order not executed ? Why can't I see my order in Kraken ?**
+* **Why is my order not executed? Why can't I see my order in Kraken?**
 
-Kraken's API "Add standard order" call enables a validate only feature that is *DEFAULTED TO YES* here. In order to have your order executed, try with ``validate=None``. 
+Kraken's API "Add standard order" call enables a validate only feature that
+*defaults to True* here. In order to have your order executed, try with
+``validate=False``.
 
->>> k.add_standard_order(pair="ATOMXBT", type="buy", ordertype="limit", volume="420.0", price="0.00042", validate=None)
+.. code:: python
+
+    k.add_standard_order(pair="ATOMXBT", type="buy", ordertype="limit", volume="420.0", price="0.00042", validate=False)
 
 
 Development
