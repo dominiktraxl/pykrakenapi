@@ -599,7 +599,8 @@ class KrakenAPI(object):
             ohlc['dtime'] = pd.to_datetime(ohlc.time, unit='s')
             ohlc.sort_values('dtime', ascending=ascending, inplace=True)
             ohlc.set_index('dtime', inplace=True)
-            ohlc.index.freq = str(interval) + 'T'
+            freq = str(interval) + 'T' if ascending else str(-interval) + 'T'
+            ohlc.index.freq = freq
 
             # dtypes
             for col in ['open', 'high', 'low', 'close', 'vwap', 'volume']:
@@ -1896,7 +1897,7 @@ class KrakenAPI(object):
             User reference id.  32-bit signed number.
 
         validate : bool, optional (default=True)
-            Validate inputs only.  Do not submit order (default).
+            Validate inputs only. Do not submit order (default).
 
         optional closing order to add to system when order gets filled:
             close[ordertype] = order type
