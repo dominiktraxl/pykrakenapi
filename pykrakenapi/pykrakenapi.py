@@ -100,6 +100,8 @@ def callratelimiter(query_type):
                             result = func(*args, **kwargs)
                             return result
                         except (HTTPError, KrakenAPIError) as err:
+                            if self.exception_handler_hook:
+                                self.exception_handler_hook(err, args, kwargs)
                             print('attempt: {} |'.format(
                                 str(attempt).zfill(3)), err)
                             attempt += 1
@@ -133,6 +135,8 @@ def callratelimiter(query_type):
                             result = func(*args, **kwargs)
                             return result
                         except (HTTPError, KrakenAPIError) as err:
+                            if self.exception_handler_hook:
+                                self.exception_handler_hook(err, args, kwargs)
                             print('attempt: {} |'.format(
                                 str(attempt).zfill(3)), err)
                             attempt += 1
@@ -191,6 +195,15 @@ class KrakenAPI(object):
         then retry the query. If ``crl_sleep`` is set to 0, raise a potential
         CallRateLimitError instead of sleeping and retrying.
 
+    exception_handler_hook : callable, optional (default=None)
+        A function that is invoked when an error response is received from Kraken.
+        Example:
+            ```
+            def exception_handler_hook(exc, call_args, call_kwargs):
+                if "EOrder:Invalid order" in exc.args[0]:
+                    print(f"Invalid order")
+            ```
+
     Attributes
     ----------
     api : krakenex.API
@@ -198,7 +211,7 @@ class KrakenAPI(object):
 
     """
 
-    def __init__(self, api, tier='Intermediate', retry=1, crl_sleep=5):
+    def __init__(self, api, tier='Intermediate', retry=1, crl_sleep=5, exception_handler_hook=None):
 
         self.api = api
 
@@ -227,6 +240,8 @@ class KrakenAPI(object):
         # retry timers
         self.retry = retry
         self.crl_sleep = crl_sleep
+
+        self.exception_handler_hook = exception_handler_hook
 
     @crl_sleep
     @callratelimiter('public')
