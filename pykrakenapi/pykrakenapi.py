@@ -1393,6 +1393,183 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('ledger/trade history')
+    def get_deposit_methods(self, asset='XBT', otp=None):
+        """Get methods available for depositing a particular asset.
+
+        Return a ``pd.DataFrame`` of deposit methods info.
+
+        Parameters
+        ----------
+        asset : str (default='XBT')
+            Asset for which to return deposit methods.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        depositmethods : pd.DataFrame
+            Table containing trade balance info.
+            method = name of deposit method
+            limit = maximum net amount that can be deposited right now, or false if no limit
+            fee = amount of fees that will be paid
+            address-setup-fee = whether or not method has an address setup fee
+            gen-address = whether new addresses can be generated for this method
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('DepositMethods', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        depositmethods = pd.DataFrame(index=[asset], data=res['result']).T
+
+        return depositmethods
+
+    @crl_sleep
+    @callratelimiter('ledger/trade history')
+    def get_deposit_addresses(self, asset='XBT', method='Bitcoin', new=False, otp=None):
+        """Get (or generate a new) deposit addresses for a particular asset and method.
+
+        Return a ``pd.DataFrame`` of deposit methods info.
+
+        Parameters
+        ----------
+        asset : str (default='XBT')
+            Asset being deposited
+
+        method : str (default='Bitcoin')
+            Name of the deposit method
+
+        new : boolean, optional (default=False)
+            Whether or not to generate a new address
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        depositmethods : pd.DataFrame
+            Table containing trade balance info.
+            address = deposit Address
+            expiretm = expiration time in unix timestamp, or 0 if not expiring
+            new = whether or not address has ever been used
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('DepositAddresses', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        depositaddresses = pd.DataFrame(index=[asset], data=res['result']).T
+
+        return depositaddresses
+
+    @crl_sleep
+    @callratelimiter('ledger/trade history')
+    def get_deposit_status(self, asset='XBT', method=None, otp=None):
+        """Get information about recent deposits made.
+
+        Return a ``pd.DataFrame`` of recent deposits.
+
+        Parameters
+        ----------
+        asset : str (default='XBT')
+            Asset being deposited
+
+        method : str, optional (default=None)
+            Name of the deposit method
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        depositstatus : pd.DataFrame
+            Table containing recent deposit status info.
+            method = name of deposit method
+            aclass = asset class
+            asset = asset
+            refid = reference ID
+            txid = method transaction ID
+            info = method transaction information
+            amount = amount deposited
+            fee = fees paid
+            time = unix timestamp when request was made
+            status = status of deposit
+            status-prop = addition status properties (if available)
+                          "return": a return transaction initiated by Kraken
+                          "onhold": deposit is on hold pending review
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('DepositStatus', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        depositstatus = pd.DataFrame(index=[asset], data=res['result']).T
+
+        return depositstatus
+
+    @crl_sleep
+    @callratelimiter('ledger/trade history')
     def query_trades_info(self, txid, trades=False, otp=None, ascending=False):
         """Query trades info.
 
