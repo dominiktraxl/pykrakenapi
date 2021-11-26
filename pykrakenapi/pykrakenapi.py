@@ -1569,6 +1569,234 @@ class KrakenAPI(object):
         return depositstatus
 
     @crl_sleep
+    @callratelimiter('other')
+    def get_withdrawal_information(self, key, asset='XBT', amount=0.0, otp=None):
+        """Retrieve fee information about potential withdrawals for a particular asset, key and amount.
+
+        Return a ``pd.DataFrame`` of withdrawal info.
+
+        Parameters
+        ----------
+        key : str
+            Withdrawal key name, as set up on your account.
+
+        asset : str (default='XBT')
+            Asset being withdrawn.
+
+        amount : float (default=0.0)
+            Amount to be withdrawn.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required).
+
+        Returns
+        -------
+        withdrawal_info : pd.DataFrame
+            Table containing withdrawal info.
+            method = name of asset
+            limit = max. available for withdraw
+            amount = withdrawn amount (fees already subtracted)
+            fee = withdrawal fees
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items()
+                if arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('WithdrawInfo', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        withdrawal_info = pd.DataFrame(index=[asset], data=res['result']).T
+
+        return withdrawal_info
+
+    @crl_sleep
+    @callratelimiter('other')
+    def withdraw_funds(self, key, asset='XBT', amount=0.0, otp=None):
+        """Make a withdrawal request.
+
+        Initialize a withdrawal and return the withdrawal refid.
+
+        Parameters
+        ----------
+        key : str
+            Withdrawal key name, as set up on your account.
+
+        asset : str (default='XBT')
+            Asset being withdrawn.
+
+        amount : float (default=0.0)
+            Amount to be withdrawn.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required).
+
+        Returns
+        -------
+        withdrawal_refid : str
+            refid of the withdraw request.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items()
+                if arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Withdraw', data=data)
+
+        # check for error
+        if len(res["error"]) > 0:
+            raise KrakenAPIError(res['error'])
+
+        return res['result']
+
+    @crl_sleep
+    @callratelimiter('other')
+    def get_withdrawal_status(self, asset='XBT', method=None, otp=None):
+        """Retrieve information about recently requests withdrawals.
+
+        Return a ``pd.DataFrame`` of recent withdrawals.
+
+        Parameters
+        ----------
+        asset : str (default='XBT')
+            Asset being withdrawn.
+
+        method : str (default=None)
+            Name of the withdrawal method.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required).
+
+        Returns
+        -------
+        withdrawalstatus : pd.DataFrame
+            Table containing recent withdrawal status info.
+            method = name of withdrawal method
+            aclass = asset class
+            asset = asset
+            refid = reference ID
+            txid = method transaction ID
+            info = method transaction information
+            amount = amount withdrawn
+            fee = fees paid
+            time = unix timestamp when request was made
+            status = status of withdrawal
+            status-prop = addition status properties (if available)
+                          "cancel-pending" cancelation requested
+                          "canceled" canceled
+                          "cancel-denied" cancelation requested but was denied
+                          "return" a return transaction initiated by Kraken; it cannot be canceled
+                          "onhold" withdrawal is on hold pending review
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items()
+                if arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('WithdrawStatus', data=data)
+
+        # check for error
+        if len(res["error"]) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        withdrawalstatus = pd.DataFrame(index=[asset], data=res['result']).T
+
+        return withdrawalstatus
+
+    @crl_sleep
+    @callratelimiter('other')
+    def cancel_withdrawal(self, asset='XBT', refid=None, otp=None):
+        """Cancel a recently requested withdrawal, if it has not already been successfully processed.
+
+        Returns whether cancellation was successful or not.
+
+        Parameters
+        ----------
+        asset : str (default='XBT')
+            Asset being withdrawn.
+
+        refid : str (default=None)
+            Withdrawal reference ID.
+
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required).
+
+        Returns
+        -------
+        succes : bool
+            Whether cancellation was successful or not.
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items()
+                if arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('WithdrawCancel', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        return res['result']
+
+    @crl_sleep
     @callratelimiter('ledger/trade history')
     def query_trades_info(self, txid, trades=False, otp=None, ascending=False):
         """Query trades info.
