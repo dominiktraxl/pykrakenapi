@@ -2491,3 +2491,277 @@ class KrakenAPI(object):
         if self.api_counter < 0:
             self.api_counter = 0
         self.time_of_last_query = now
+    
+    def get_stakeable_assets(self, otp=None):
+        """Get list of stakeable assets and staking details.
+
+        Return a ``pd.DataFrame`` of asset that the user is able to stake.
+        This operation requires an API key with both `Withdraw funds` and
+        `Query funds` permission.
+
+        Parameters
+        ----------
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        assets : pd.DataFrame
+            Table containing asset names staking details.
+            index = asset name
+            method = Unique ID of the staking option (used in Stake/Unstake
+            operations)
+            staking_asset = Staking asset code/name
+            on_chain = Whether the staking operation is on-chain or not.
+            can_stake = Whether the user will be able to stake this asset.
+            can_unstake = Whether the user will be able to unstake this asset.
+            rewards.reward = Reward earned while staking.
+            rewards.type = Reward type.
+            minimum_amount.staking = minimum amount that can be staked.
+            minimum_amount.unstaking = minimum amount that can be unstaked
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Staking/Assets', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        assets = pd.json_normalize(data=res['result']).set_index('asset')
+
+        return assets
+    
+    def get_pending_staking_transactions(self, otp=None):
+        """Get list of pending staking transactions.
+
+        Returns a ``pd.DataFrame`` of pending staking transactions. 
+
+        Parameters
+        ----------
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        transactions : pd.DataFrame
+            Table containing transaction refids and details.
+            index = refid
+            type = Type of transaction {'bonding', 'reward', 'unbonding'}
+            asset = Asset code/name
+            amount = The transaction amount
+            time = Unix timestamp when the transaction was initiated.
+            bond_start = Unix timestamp from the start of bond period
+            (applicable only to `bonding` transactions).
+            bond_end = Unix timestamp of the end of bond period
+            (applicable only to `bonding` transactions).
+            status = Transaction status {'Initial', 'Pending', 'Settled'
+            'Success', 'Failure'}
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Staking/Pending', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        try:
+            transactions = pd.json_normalize(
+                data=res['result']
+            ).set_index('refid')
+        except KeyError:
+            return None
+
+        return transactions
+    
+    def get_staking_transactions(self, otp=None):
+        """Returns the list of 1000 recent staking transactions from past
+        90 days.
+
+        Returns a ``pd.DataFrame`` of staking transactions. 
+
+        Parameters
+        ----------
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        transactions : pd.DataFrame
+            Table containing transaction refids and details.
+            index = refid
+            type = Type of transaction {'bonding', 'reward', 'unbonding'}
+            asset = Asset code/name
+            amount = The transaction amount
+            time = Unix timestamp when the transaction was initiated.
+            bond_start = Unix timestamp from the start of bond period
+            (applicable only to `bonding` transactions).
+            bond_end = Unix timestamp of the end of bond period
+            (applicable only to `bonding` transactions).
+            status = Transaction status {'Initial', 'Pending', 'Settled'
+            'Success', 'Failure'}
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Staking/Transactions', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        # create dataframe
+        try:
+            transactions = pd.json_normalize(
+                data=res['result']
+            ).set_index('refid')
+        except KeyError:
+            return None
+
+        return transactions
+
+    def stake_asset(self, asset, amount, method, otp=None):
+        """Stake an asset from your spot wallet. This operation requires an
+        API key with `Withdraw funds` permission.
+
+        Returns a ``str`` of the transaction Reference ID. 
+
+        Parameters
+        ----------
+        asset : str
+            Asset to stake (asset ID or `altname`)
+        amount : float
+            Amount of the asset to stake
+        method : str
+            Name of the staking option to use (refer to the Staking Assets
+            endpoint for the correct method names for each asset)
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        refid : str
+            Transaction Reference ID
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Stake', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        return res['result']
+    
+    def unstake_asset(self, asset, amount, otp=None):
+        """Unstake an asset from your staking wallet. This operation requires
+        an API key with `Withdraw funds` permission.
+
+        Returns a ``str`` of the transaction Reference ID. 
+
+        Parameters
+        ----------
+        asset : str
+            Asset to unstake (asset ID or `altname`). Must be a valid staking
+            asset (e.g. XBT.M, XTZ.S, ADA.S)
+        amount : float
+            Amount of the asset to stake
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        refid : str
+            Transaction Reference ID
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Unstake', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        return res['result']
