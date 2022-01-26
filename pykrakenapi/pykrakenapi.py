@@ -2491,7 +2491,7 @@ class KrakenAPI(object):
         if self.api_counter < 0:
             self.api_counter = 0
         self.time_of_last_query = now
-    
+
     def get_stakeable_assets(self, otp=None):
         """Get list of stakeable assets and staking details.
 
@@ -2548,11 +2548,11 @@ class KrakenAPI(object):
         assets = pd.json_normalize(data=res['result']).set_index('asset')
 
         return assets
-    
+
     def get_pending_staking_transactions(self, otp=None):
         """Get list of pending staking transactions.
 
-        Returns a ``pd.DataFrame`` of pending staking transactions. 
+        Returns a ``pd.DataFrame`` of pending staking transactions.
 
         Parameters
         ----------
@@ -2608,12 +2608,12 @@ class KrakenAPI(object):
             return None
 
         return transactions
-    
+
     def get_staking_transactions(self, otp=None):
         """Returns the list of 1000 recent staking transactions from past
         90 days.
 
-        Returns a ``pd.DataFrame`` of staking transactions. 
+        Returns a ``pd.DataFrame`` of staking transactions.
 
         Parameters
         ----------
@@ -2674,7 +2674,7 @@ class KrakenAPI(object):
         """Stake an asset from your spot wallet. This operation requires an
         API key with `Withdraw funds` permission.
 
-        Returns a ``str`` of the transaction Reference ID. 
+        Returns a ``str`` of the transaction Reference ID.
 
         Parameters
         ----------
@@ -2718,12 +2718,12 @@ class KrakenAPI(object):
             raise KrakenAPIError(res['error'])
 
         return res['result']
-    
+
     def unstake_asset(self, asset, amount, otp=None):
         """Unstake an asset from your staking wallet. This operation requires
         an API key with `Withdraw funds` permission.
 
-        Returns a ``str`` of the transaction Reference ID. 
+        Returns a ``str`` of the transaction Reference ID.
 
         Parameters
         ----------

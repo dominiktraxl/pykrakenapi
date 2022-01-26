@@ -24,7 +24,7 @@ setup(
     author="Dominik Traxl",
     author_email="dominik.traxl@posteo.org",
     url='https://github.com/dominiktraxl/pykrakenapi/',
-    download_url='https://github.com/dominiktraxl/pykrakenapi/tarball/v0.2.3',
+    download_url='https://github.com/dominiktraxl/pykrakenapi/tarball/v0.2.4',
     description=("A Python implementation of the Kraken API."),
     long_description=open('README.rst').read(),
     python_requires='>=3',
