@@ -31,6 +31,8 @@ import datetime
 from functools import wraps
 
 import pandas as pd
+import numpy as np
+from collections import OrderedDict
 
 from requests import HTTPError
 
@@ -149,6 +151,67 @@ def callratelimiter(query_type):
         return wrapper
     return decorate_func
 
+def trade_callratelimiter(query_type):
+    def decorate_func(func):
+        @wraps(func)
+        def wrapper(*args, **kwargs):
+            """Call rate limit counter.
+
+            Implementation of a trade call rate limiter as a decorator. If the
+            call rate limit is reached, api calls will be blocked.
+
+            See https://support.kraken.com/hc/en-us/articles/360045239571-Trading-rate-limits
+
+            """
+
+            self = args[0]
+
+            # trade API, with an independent counter system
+            if query_type == 'trade/place_order':
+                penalty = 1
+                counter = self.update_trade_api_counter()
+                lapse = counter['counter'] + penalty - self.trade_limit
+                if lapse > 0:
+                    msg = (
+                        f"trade rate limit will be exceeded,"
+                        f" waiting {lapse} seconds"
+                    )
+                    time.sleep(lapse)
+                result = func(*args, **kwargs)
+                self.trade_order_register[result['txid'][0]] = time.time()
+                self.update_trade_api_counter(penalty)
+
+                return result
+            
+            if query_type == 'trade/cancel_order':
+                txid = args[1]
+                try:
+                    ts = self.trade_order_register.popitem(txid)
+                except KeyError:
+                    ts = None
+
+                if bool(ts):
+                    lapse = time.time() - ts[1]
+                    penalty = self.get_trade_cancel_penalty(lapse)
+                    counter = self.update_trade_api_counter()
+                    lapse = counter['counter'] + penalty - self.trade_limit
+                    if lapse > 0:
+                        msg = (
+                            f"trade rate limit will be exceeded,"
+                            f" waiting {lapse} seconds"
+                        )
+                    else:
+                        lapse = 0
+                    time.sleep(lapse)
+                else:
+                    penalty = 0
+                result = func(*args, **kwargs)
+                self.update_trade_api_counter(penalty)
+                return result
+
+        return wrapper
+    return decorate_func
+
 
 class KrakenAPIError(Exception):
     pass
@@ -207,6 +270,16 @@ class KrakenAPI(object):
         self.time_of_last_query = datetime.datetime.now()
 
         self.api_counter = 0
+        self.api_trade_counter = {
+            'time': time.time(),
+            'counter': 0.0
+        }
+
+        self.trade_order_register = OrderedDict()
+        self.trade_cancel_penalty = np.array([
+            [5, 10, 15, 45, 90, 300, np.inf],
+            [8, 6, 5, 4, 2, 1, 0]
+        ])
 
         if tier == 'None':
             self.limit = float('inf')
@@ -215,18 +288,47 @@ class KrakenAPI(object):
         elif tier == 'Starter':
             self.limit = 15
             self.factor = 3  # down by 1 every three seconds
+            self.trade_limit = 60
+            self.trade_decay = 1  # per second
 
         elif tier == 'Intermediate':
             self.limit = 20
             self.factor = 2  # down by 1 every two seconds
+            self.trade_limit = 125
+            self.trade_decay = 2.34  # per second
 
         elif tier == 'Pro':
             self.limit = 20
             self.factor = 1  # down by 1 every one second
+            self.trade_limit = 180
+            self.trade_decay = 3.75  # per second
 
         # retry timers
         self.retry = retry
         self.crl_sleep = crl_sleep
+    
+    def get_trade_cancel_penalty(self, time):
+        i = np.searchsorted(
+            self.trade_cancel_penalty[0],
+            time,
+            side = 'right'
+        )
+        i = 0 if i < 0 else i
+        return self.trade_cancel_penalty[1][i]
+    
+    def update_trade_api_counter(self, penalty=0):
+        ts = time.time()
+        counter = (
+            self.api_trade_counter['counter']
+            - (ts - self.api_trade_counter['time']) * self.trade_decay
+        ) + penalty
+        counter = 0 if counter < 0 else counter
+        self.api_trade_counter = {
+            'time': ts,
+            'counter': counter
+                
+        }
+        return self.api_trade_counter
 
     @crl_sleep
     @callratelimiter('public')
@@ -2225,6 +2327,7 @@ class KrakenAPI(object):
 
         return currency, volume, fees, fees_maker
 
+    @trade_callratelimiter('trade/place_order')
     def add_standard_order(self, pair, type, ordertype, volume, price=None,
                            price2=None, leverage=None, oflags=None, starttm=0,
                            expiretm=0, userref=None, validate=True,
@@ -2393,10 +2496,9 @@ class KrakenAPI(object):
 
         return res['result']
 
+    @trade_callratelimiter('trade/cancel_order')
     def cancel_open_order(self, txid, otp=None):
-        """UNTESTED!
-
-        Cancel open order(s).
+        """Cancel open order(s).
 
         Cancel open order with transaction id ``txid``.
 
