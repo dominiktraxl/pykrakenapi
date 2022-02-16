@@ -170,16 +170,23 @@ def trade_callratelimiter(query_type):
             if query_type == 'trade/place_order':
                 penalty = 1
                 counter = self.update_trade_api_counter()
-                lapse = counter['counter'] + penalty - self.trade_limit
+                lapse = (
+                    counter['counter'] + penalty + self.trade_buffer
+                    - self.trade_limit
+                )
                 if lapse > 0:
+                    sleep = lapse / self.trade_decay
                     msg = (
                         f"trade rate limit will be exceeded,"
-                        f" waiting {lapse} seconds"
+                        f" waiting {sleep} seconds"
                     )
-                    time.sleep(lapse)
+                    time.sleep(sleep)
                 result = func(*args, **kwargs)
                 self.trade_order_register[result['txid'][0]] = time.time()
-                self.update_trade_api_counter(penalty)
+                print(
+                    f"Current counter:"
+                    f" {self.update_trade_api_counter(penalty)['counter']}"
+                )
 
                 return result
             
@@ -194,19 +201,26 @@ def trade_callratelimiter(query_type):
                     lapse = time.time() - ts[1]
                     penalty = self.get_trade_cancel_penalty(lapse)
                     counter = self.update_trade_api_counter()
-                    lapse = counter['counter'] + penalty - self.trade_limit
+                    lapse = (
+                        counter['counter'] + penalty + self.trade_buffer
+                        - self.trade_limit
+                    )
                     if lapse > 0:
+                        sleep = lapse / self.trade_decay
                         msg = (
                             f"trade rate limit will be exceeded,"
-                            f" waiting {lapse} seconds"
+                            f" waiting {sleep} seconds"
                         )
                     else:
-                        lapse = 0
-                    time.sleep(lapse)
+                        sleep = 0
+                    time.sleep(sleep)
                 else:
                     penalty = 0
                 result = func(*args, **kwargs)
-                self.update_trade_api_counter(penalty)
+                print(
+                    f"Current counter:"
+                    f" {self.update_trade_api_counter(penalty)['counter']}"
+                )
                 return result
 
         return wrapper
@@ -280,6 +294,7 @@ class KrakenAPI(object):
             [5, 10, 15, 45, 90, 300, np.inf],
             [8, 6, 5, 4, 2, 1, 0]
         ])
+        self.trade_buffer = 10  # a buffer around the trade limiter
 
         if tier == 'None':
             self.limit = float('inf')
