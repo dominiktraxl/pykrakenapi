@@ -183,10 +183,10 @@ def trade_callratelimiter(query_type):
                     time.sleep(sleep)
                 result = func(*args, **kwargs)
                 self.trade_order_register[result['txid'][0]] = time.time()
-                print(
-                    f"Current counter:"
-                    f" {self.update_trade_api_counter(penalty)['counter']}"
-                )
+                # print(
+                #     f"Current counter:"
+                #     f" {self.update_trade_api_counter(penalty)['counter']}"
+                # )
 
                 return result
             
@@ -217,10 +217,10 @@ def trade_callratelimiter(query_type):
                 else:
                     penalty = 0
                 result = func(*args, **kwargs)
-                print(
-                    f"Current counter:"
-                    f" {self.update_trade_api_counter(penalty)['counter']}"
-                )
+                # print(
+                #     f"Current counter:"
+                #     f" {self.update_trade_api_counter(penalty)['counter']}"
+                # )
                 return result
 
         return wrapper
@@ -2876,6 +2876,55 @@ class KrakenAPI(object):
 
         # query
         res = self.api.query_private('Unstake', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        return res['result']
+
+    def get_websockets_token(self, opt=None):
+        """An authentication token must be requested via this REST API endpoint
+        in order to connect to and authenticate with our Websockets API. The
+        token should be used within 15 minutes of creation, but it does not
+        expire once a successful Websockets connection and private subscription
+        has been made and is maintained.
+
+        The 'Access WebSockets API' permission must be enabled for the API key
+        in order to generate the authentication token.
+
+        Returns a ``dict`` of the transaction Reference ID.
+
+        Parameters
+        ----------
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        token: str
+            Websockets token
+        expires : int
+            Time (in seconds) after which the token expires
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('GetWebSocketsToken', data=data)
 
         # check for error
         if len(res['error']) > 0:
