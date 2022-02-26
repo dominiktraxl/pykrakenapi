@@ -2788,7 +2788,7 @@ class KrakenAPI(object):
         The 'Access WebSockets API' permission must be enabled for the API key
         in order to generate the authentication token.
 
-        Returns a ``dict`` of the transaction Reference ID.
+        Returns a ``dict`` of the websockets token and expriry time (secs).
 
         Parameters
         ----------
