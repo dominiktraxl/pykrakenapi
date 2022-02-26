@@ -1871,9 +1871,7 @@ class KrakenAPI(object):
     @crl_sleep
     @callratelimiter('other')
     def get_open_positions(self, txid=None, docalcs=False, otp=None):
-        """UNTESTED!
-
-        Get open positins info.
+        """Get open positins info.
 
         Return a ``pd.DataFrame`` of open positions info.
 
@@ -2394,9 +2392,7 @@ class KrakenAPI(object):
         return res['result']
 
     def cancel_open_order(self, txid, otp=None):
-        """UNTESTED!
-
-        Cancel open order(s).
+        """Cancel open order(s).
 
         Cancel open order with transaction id ``txid``.
 
