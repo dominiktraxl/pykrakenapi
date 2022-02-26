@@ -19,7 +19,7 @@ from setuptools import setup, find_packages
 
 setup(
     name="pykrakenapi",
-    version='0.2.4',
+    version='0.2.5',
     packages=find_packages(),
     author="Dominik Traxl",
     author_email="dominik.traxl@posteo.org",
