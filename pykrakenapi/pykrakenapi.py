@@ -108,7 +108,7 @@ def callratelimiter(query_type):
                             self.time_of_last_public_query = now
                             continue
 
-            # privat API, determine increment
+            # private API, determine increment
             if query_type == 'ledger/trade history':
                 incr = 2
             elif query_type == 'other':
@@ -2488,6 +2488,8 @@ class KrakenAPI(object):
             self.api_counter = 0
         self.time_of_last_query = now
 
+    @crl_sleep
+    @callratelimiter('other')
     def get_stakeable_assets(self, otp=None):
         """Get list of stakeable assets and staking details.
 
@@ -2545,6 +2547,8 @@ class KrakenAPI(object):
 
         return assets
 
+    @crl_sleep
+    @callratelimiter('other')
     def get_pending_staking_transactions(self, otp=None):
         """Get list of pending staking transactions.
 
@@ -2605,6 +2609,8 @@ class KrakenAPI(object):
 
         return transactions
 
+    @crl_sleep
+    @callratelimiter('other')
     def get_staking_transactions(self, otp=None):
         """Returns the list of 1000 recent staking transactions from past
         90 days.
@@ -2666,6 +2672,8 @@ class KrakenAPI(object):
 
         return transactions
 
+    @crl_sleep
+    @callratelimiter('other')
     def stake_asset(self, asset, amount, method, otp=None):
         """Stake an asset from your spot wallet. This operation requires an
         API key with `Withdraw funds` permission.
@@ -2715,6 +2723,8 @@ class KrakenAPI(object):
 
         return res['result']
 
+    @crl_sleep
+    @callratelimiter('other')
     def unstake_asset(self, asset, amount, otp=None):
         """Unstake an asset from your staking wallet. This operation requires
         an API key with `Withdraw funds` permission.
@@ -2755,6 +2765,57 @@ class KrakenAPI(object):
 
         # query
         res = self.api.query_private('Unstake', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+
+        return res['result']
+
+    @crl_sleep
+    @callratelimiter('other')
+    def get_websockets_token(self, opt=None):
+        """An authentication token must be requested via this REST API endpoint
+        in order to connect to and authenticate with our Websockets API. The
+        token should be used within 15 minutes of creation, but it does not
+        expire once a successful Websockets connection and private subscription
+        has been made and is maintained.
+
+        The 'Access WebSockets API' permission must be enabled for the API key
+        in order to generate the authentication token.
+
+        Returns a ``dict`` of the websockets token and expriry time (secs).
+
+        Parameters
+        ----------
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        token: str
+            Websockets token
+        expires : int
+            Time (in seconds) after which the token expires
+
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+
+        """
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('GetWebSocketsToken', data=data)
 
         # check for error
         if len(res['error']) > 0:
