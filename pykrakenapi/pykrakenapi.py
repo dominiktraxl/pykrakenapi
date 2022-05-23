@@ -2225,8 +2225,8 @@ class KrakenAPI(object):
 
     def add_standard_order(self, ordertype, type, pair, userref=None,
                            volume=None, price=None, price2=None,
-                           trigger="last", leverage=None, oflags=None,
-                           timeinforce="GTC", starttm=0, expiretm=0,
+                           trigger=None, leverage=None, oflags=None,
+                           timeinforce=None, starttm=0, expiretm=0,
                            close_ordertype=None, close_price=None,
                            close_price2=None, deadline=None, validate=True,
                            otp=None):
@@ -2279,7 +2279,7 @@ class KrakenAPI(object):
             Relative prices can be suffixed with a % to signify the relative
             amount as a percentage.
 
-        trigger : str, optional (default="last")
+        trigger : str, optional (default=None)
             Price signal used to trigger stop-loss, stop-loss-limit,
             take-profit and take-profit-limit orders. One of ["index", "last"].
             Note: This trigger type will as well be used for associated
@@ -2296,7 +2296,7 @@ class KrakenAPI(object):
               exclusive with fcib)
             - nompp disable market price protection for market orders
 
-        timeinforce : str, optional (default="GTC")
+        timeinforce : str, optional (default=None)
             One of ["GTC", "IOC", "GTD"].
             Time-in-force of the order to specify how long it should remain in
             the order book before being cancelled. GTC (Good-'til-cancelled) is
