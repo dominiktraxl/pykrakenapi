@@ -761,7 +761,7 @@ class KrakenAPI(object):
         if not trades.empty:
 
             trades.columns = [
-                'price', 'volume', 'time', 'buy_sell', 'market_limit', 'misc'
+                'price', 'volume', 'time', 'buy_sell', 'market_limit', 'misc', 'id'
             ]
             trades.buy_sell.replace('b', 'buy', inplace=True)
             trades.buy_sell.replace('s', 'sell', inplace=True)
