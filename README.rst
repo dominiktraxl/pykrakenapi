@@ -1,9 +1,7 @@
 Warning
 =======
 
-This repository is not maintained actively at the moment. 
-
-I will, however, respond to issues and integrate code contributions.
+This repository is not maintained actively at the moment.
 
 
 pykrakenapi
