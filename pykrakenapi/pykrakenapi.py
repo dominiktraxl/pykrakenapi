@@ -603,8 +603,7 @@ class KrakenAPI(object):
             ohlc.index.freq = freq
 
             # dtypes
-            for col in ['open', 'high', 'low', 'close', 'vwap', 'volume']:
-                ohlc.loc[:, col] = ohlc[col].astype(float)
+            ohlc = ohlc.astype({col: float for col in ['open', 'high', 'low', 'close', 'vwap', 'volume']})
 
             return ohlc, last
 
@@ -774,8 +773,7 @@ class KrakenAPI(object):
             trades.set_index('dtime', inplace=True)
 
             # dtypes
-            for col in ['price', 'volume']:
-                trades.loc[:, col] = trades[col].astype(float)
+            trades = trades.astype({name: float for name in ['price', 'volume']})
 
         return trades, last
 
@@ -861,8 +859,8 @@ class KrakenAPI(object):
             spread.set_index('dtime', inplace=True)
 
             # spread
-            spread.loc[:, 'bid'] = spread.bid.astype(float)
-            spread.loc[:, 'ask'] = spread.ask.astype(float)
+            spread['bid'] = spread.bid.astype(float)
+            spread['ask'] = spread.ask.astype(float)
             spread['spread'] = spread.ask - spread.bid
 
         return spread, last
@@ -915,7 +913,7 @@ class KrakenAPI(object):
         balance = pd.DataFrame(index=['vol'], data=res['result']).T
 
         if not balance.empty:
-            balance.loc[:, 'vol'] = balance.vol.astype(float)
+            balance['vol'] = balance.vol.astype(float)
 
         return balance
 
@@ -985,7 +983,7 @@ class KrakenAPI(object):
         tradebalance = pd.DataFrame(index=[asset], data=res['result']).T
 
         if not tradebalance.empty:
-            tradebalance.loc[:, asset] = tradebalance[asset].astype(float)
+            tradebalance[asset] = tradebalance[asset].astype(float)
 
         return tradebalance
 
@@ -1095,11 +1093,10 @@ class KrakenAPI(object):
             descr.columns = ['descr_{}'.format(col) for col in descr.columns]
             del openorders['descr']
             openorders = pd.concat((openorders, descr), axis=1)
-            for col in ['expiretm', 'opentm', 'starttm']:
-                openorders.loc[:, col] = openorders[col].astype(int)
-            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
-                        'descr_price', 'descr_price2']:
-                openorders.loc[:, col] = openorders[col].astype(float)
+            openorders = openorders.astype({col: int for col in ['expiretm', 'opentm', 'starttm']})
+            openorders = openorders.astype({col: float for col in [
+                'cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price', 'descr_price2'
+            ]})
 
         return openorders
 
@@ -1186,11 +1183,10 @@ class KrakenAPI(object):
             descr.columns = ['descr_{}'.format(col) for col in descr.columns]
             del closed['descr']
             closed = pd.concat((closed, descr), axis=1)
-            for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
-                closed.loc[:, col] = closed[col].astype(int)
-            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
-                        'descr_price', 'descr_price2']:
-                closed.loc[:, col] = closed[col].astype(float)
+            closed = closed.astype({col: int for col in ['closetm', 'expiretm', 'opentm', 'starttm']})
+            closed = closed.astype({col: float for col in [
+                'cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price', 'descr_price2'
+            ]})
 
         return closed, count
 
@@ -1256,10 +1252,10 @@ class KrakenAPI(object):
             orders = pd.concat((orders, descr), axis=1)
             for col in ['closetm', 'expiretm', 'opentm', 'starttm']:
                 if col in orders:
-                    orders.loc[:, col] = orders[col].astype(float)
-            for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
-                        'descr_price', 'descr_price2']:
-                orders.loc[:, col] = orders[col].astype(float)
+                    orders[col] = orders[col].astype(float)
+            orders = orders.astype({name: float for name in [
+                'cost', 'fee', 'price', 'vol', 'vol_exec', 'descr_price', 'descr_price2'
+            ]})
 
         return orders
 
@@ -1386,8 +1382,7 @@ class KrakenAPI(object):
             trades.set_index('dtime', inplace=True)
 
             # set dtypes
-            for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']:
-                trades.loc[:, col] = trades[col].astype(float)
+            trades = trades.astype({col: float for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']})
 
         return trades, count
 
@@ -1863,8 +1858,7 @@ class KrakenAPI(object):
             trades.set_index('dtime', inplace=True)
 
             # set dtypes
-            for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']:
-                trades.loc[:, col] = trades[col].astype(float)
+            trades = trades.astype({col: float for col in ['cost', 'fee', 'margin', 'price', 'time', 'vol']})
 
         return trades
 
@@ -2043,9 +2037,8 @@ class KrakenAPI(object):
             ledgers.set_index('dtime', inplace=True)
 
             # dtypes
-            for col in ['amount', 'balance', 'fee']:
-                ledgers.loc[:, col] = ledgers[col].astype(float)
-            ledgers.loc[:, 'time'] = ledgers.time.astype(int)
+            ledgers = ledgers.astype({col: float for col in ['amount', 'balance', 'fee']})
+            ledgers['time'] = ledgers.time.astype(int)
 
         return ledgers, count
 
@@ -2113,9 +2106,8 @@ class KrakenAPI(object):
             ledgers.set_index('dtime', inplace=True)
 
             # dtypes
-            for col in ['amount', 'balance', 'fee']:
-                ledgers.loc[:, col] = ledgers[col].astype(float)
-            ledgers.loc[:, 'time'] = ledgers.time.astype(int)
+            ledgers = ledgers.astype({col: float for col in ['amount', 'balance', 'fee']})
+            ledgers['time'] = ledgers.time.astype(int)
 
         return ledgers
 
@@ -2207,14 +2199,12 @@ class KrakenAPI(object):
         # fees
         try:
             fees = pd.DataFrame(res['result']['fees'])
-            for col in fees.columns:
-                fees.loc[:, col] = fees[col].astype(float)
+            fees = fees.astype({col: float for col in fees.columns})
         except KeyError:
             fees = None
         try:
             fees_maker = pd.DataFrame(res['result']['fees_maker'])
-            for col in fees_maker.columns:
-                fees_maker.loc[:, col] = fees_maker[col].astype(float)
+            fees_maker = fees_maker.astype({col: float for col in fees_maker.columns})
         except KeyError:
             fees_maker = None
 
