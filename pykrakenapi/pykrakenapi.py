@@ -599,7 +599,7 @@ class KrakenAPI(object):
             ohlc['dtime'] = pd.to_datetime(ohlc.time, unit='s')
             ohlc.sort_values('dtime', ascending=ascending, inplace=True)
             ohlc.set_index('dtime', inplace=True)
-            freq = str(interval) + 'T' if ascending else str(-interval) + 'T'
+            freq = str(interval) + 'min' if ascending else str(-interval) + 'min'
             ohlc.index.freq = freq
 
             # dtypes
