@@ -2695,7 +2695,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('other')
-    def get_allocation_status(self, strategy_id=None, otp=None):
+    def get_allocate_status(self, strategy_id=None, otp=None):
         """Get the status of the last allocation request.
         
         (De)allocation operations are asynchronous and this endpoint allows
@@ -2748,7 +2748,7 @@ class KrakenAPI(object):
 
     @crl_sleep
     @callratelimiter('other')
-    def get_deallocation_status(self, strategy_id=None, otp=None):
+    def get_deallocate_status(self, strategy_id=None, otp=None):
         """Get the status of the last deallocation request.
         
         See get_allocation_status for more details.
