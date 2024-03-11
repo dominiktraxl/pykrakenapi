@@ -2595,7 +2595,7 @@ class KrakenAPI(object):
 
         return (
             res['result']['next_cursor'], 
-            pd.DataFrame(res['result']['strategies']).set_index('id')
+            pd.DataFrame(res['result']['items']).set_index('id')
         )
 
     @crl_sleep
