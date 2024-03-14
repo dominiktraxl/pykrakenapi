@@ -599,7 +599,7 @@ class KrakenAPI(object):
             ohlc['dtime'] = pd.to_datetime(ohlc.time, unit='s')
             ohlc.sort_values('dtime', ascending=ascending, inplace=True)
             ohlc.set_index('dtime', inplace=True)
-            freq = str(interval) + 'T' if ascending else str(-interval) + 'T'
+            freq = str(interval) + 'min' if ascending else str(-interval) + 'min'
             ohlc.index.freq = freq
 
             # dtypes
@@ -1088,20 +1088,29 @@ class KrakenAPI(object):
             raise KrakenAPIError(res['error'])
 
         # create dataframe
-        openorders = pd.DataFrame(res['result']['open']).T
+        open_orders = pd.DataFrame(res['result']['open']).T
 
-        if not openorders.empty:
-            descr = openorders.descr.apply(pd.Series)
+        if not open_orders.empty:
+            descr = open_orders.descr.apply(pd.Series)
             descr.columns = ['descr_{}'.format(col) for col in descr.columns]
-            del openorders['descr']
-            openorders = pd.concat((openorders, descr), axis=1)
+            del open_orders['descr']
+            open_orders = pd.concat((open_orders, descr), axis=1)
             for col in ['expiretm', 'opentm', 'starttm']:
-                openorders.loc[:, col] = openorders[col].astype(int)
+                open_orders.loc[:, col] = open_orders[col].astype(int)
             for col in ['cost', 'fee', 'price', 'vol', 'vol_exec',
                         'descr_price', 'descr_price2']:
-                openorders.loc[:, col] = openorders[col].astype(float)
+                open_orders.loc[:, col] = open_orders[col].astype(float)
+        else:  # return empty dataframe with expected columns
+            columns = [
+                "cost", "expiretm", "fee", "limitprice", "misc", "oflags", 
+                "opentm", "price", "refid", "starttm", "status", "stopprice",
+                "userref", "vol", "vol_exec", "descr_pair", "descr_type", 
+                "descr_ordertype", "descr_price", "descr_price2", 
+                "descr_leverage", "descr_order", "descr_close"
+            ] + ['trades'] if trades else []
+            open_orders = pd.DataFrame(columns=columns)
 
-        return openorders
+        return open_orders
 
     @crl_sleep
     @callratelimiter('ledger/trade history')
@@ -2508,36 +2517,59 @@ class KrakenAPI(object):
         if self.api_counter < 0:
             self.api_counter = 0
         self.time_of_last_query = now
-
+    
     @crl_sleep
     @callratelimiter('other')
-    def get_stakeable_assets(self, otp=None):
-        """Get list of stakeable assets and staking details.
+    def get_earn_strategies(self, ascending=None, asset=None, cursor=None, 
+                            limit=None, lock_type=None, otp=None):
+        """List earn strategies along with their parameters.
 
-        Return a ``pd.DataFrame`` of asset that the user is able to stake.
-        This operation requires an API key with both `Withdraw funds` and
-        `Query funds` permission.
+        Requires a valid API key but not specific permission is required.
+        Returns only strategies that are available to the user based on 
+        geographic region. When the user does not meet the tier restriction, 
+        `can_allocate` will be false and `allocation_restriction_info` indicates
+        `Tier` as the restriction reason. Earn products generally require 
+        Intermediate tier. Get your account verified to access earn.
+        https://docs.kraken.com/rest/#tag/Earn/operation/listStrategies
+
 
         Parameters
         ----------
+        ascending : bool | None
+            true to sort ascending, false (the default) for descending.
+        asset: str | None
+            Filter strategies by asset name.
+        cursor: str | None
+            None to start at beginning/end, otherwise next page ID
+        limit: int | None
+            How many items to return per page. Note that the limit may be cap'd 
+            to lower value in the application code.
+        lock_type: List[Literal["flex", "bonded", "timed", "instant"]] | None
+            Filter strategies by lock type.
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
 
+
         Returns
         -------
-        assets : pd.DataFrame
-            Table containing asset names staking details.
-            index = asset name
-            method = Unique ID of the staking option (used in Stake/Unstake
-            operations)
-            staking_asset = Staking asset code/name
-            on_chain = Whether the staking operation is on-chain or not.
-            can_stake = Whether the user will be able to stake this asset.
-            can_unstake = Whether the user will be able to unstake this asset.
-            rewards.reward = Reward earned while staking.
-            rewards.type = Reward type.
-            minimum_amount.staking = minimum amount that can be staked.
-            minimum_amount.unstaking = minimum amount that can be unstaked
+        next_cursor : str
+            next cursor number (page Id) for paginated retrieval
+        strategies : pd.DataFrame
+            Table containing earn strategies and its details.
+            index = strategy id
+            asset = asset name
+            apr_estimate = The estimate is based on previous revenues from the 
+                strategy. Optional hint, not always present.
+            user_min_allocation = Minimum amount (in USD) for an allocation or 
+                deallocation. Absence means no minimum.
+            allocation_fee = Fee applied when allocating to this strategy
+            deallocation_fee: Fee applied when deallocating from this strategy
+            auto_compound: Auto compound choices for the earn strategy
+            yield_source: Yield generation mechanism of this strategy
+            can_allocate: Is allocation available for this strategy
+            can_deallocate: Is deallocation available for this strategy
+            allocation_restriction_info: Reason list why user is not eligible 
+                for allocating to the strategy
 
         Raises
         ------
@@ -2549,53 +2581,78 @@ class KrakenAPI(object):
 
         CallRateLimitError
             The call rate limiter blocked the query.
-
         """
-
         # create data dictionary
         data = {arg: value for arg, value in locals().items() if
                 arg != 'self' and value is not None}
 
         # query
-        res = self.api.query_private('Staking/Assets', data=data)
+        res = self.api.query_private('Earn/Strategies', data=data)
 
         # check for error
         if len(res['error']) > 0:
             raise KrakenAPIError(res['error'])
 
-        # create dataframe
-        assets = pd.json_normalize(data=res['result']).set_index('asset')
-
-        return assets
+        return (
+            res['result']['next_cursor'], 
+            pd.DataFrame(res['result']['items']).set_index('id')
+        )
 
     @crl_sleep
     @callratelimiter('other')
-    def get_pending_staking_transactions(self, otp=None):
-        """Get list of pending staking transactions.
+    def get_earn_allocations(self, ascending=None, converted_asset=None,
+                             hide_zero_allocations=None, otp=None):
+        """List all allocations for the user.
 
-        Returns a ``pd.DataFrame`` of pending staking transactions.
-
+        Requires the `Query Funds` API key permission.
+        By default all allocations are returned, even for strategies that have
+        been used in the past and have zero balance now.
+        https://docs.kraken.com/rest/#tag/Earn/operation/listAllocations
+        
         Parameters
         ----------
+        ascending : bool | None
+            true to sort ascending, false (the default) for descending.
+        converted_asset: str | None
+            A secondary currency to express the value of your allocations (the
+            default is USD).
+        hide_zero_allocations: Literal["true", "false", None]
+            Omit entries for strategies that were used in the past but now they 
+            don't hold any allocation (the default is false)
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
-        transactions : pd.DataFrame
-            Table containing transaction refids and details.
-            index = refid
-            type = Type of transaction {'bonding', 'reward', 'unbonding'}
-            asset = Asset code/name
-            amount = The transaction amount
-            time = Unix timestamp when the transaction was initiated.
-            bond_start = Unix timestamp from the start of bond period
-            (applicable only to `bonding` transactions).
-            bond_end = Unix timestamp of the end of bond period
-            (applicable only to `bonding` transactions).
-            status = Transaction status {'Initial', 'Pending', 'Settled'
-            'Success', 'Failure'}
-
+        converted_asset: str
+            A secondary asset to show the value of allocations (same as param.)
+        total_allocated: float
+            The total amount allocated across all strategies, denominated in the
+            `converted_asset` currency
+        total_rewarded: float
+        next_cursor: str | None
+        items: pd.DataFrame
+            Table containing earn strategies and its current allocations.
+            index (strategy_id) = Unique ID for Earn Strategy
+            native_asset = The asset of the native currency of this allocation
+            ammount_allocated = dict. Amounts allocated to this Earn strategy
+                .total.native
+                .total.converted
+            total_rewarded = dict. Amount earned using the strategy during the
+                whole lifetime of user account
+                .native
+                .converted
+            payout = dict. Information about the current payout period, absent 
+                if when there is no current payout period.
+                .period_start 
+                .period_end
+                .accumulated_reward
+                        .native
+                        .converted
+                .estimated_reward
+                    .native
+                    .converted
+                
         Raises
         ------
         HTTPError
@@ -2606,59 +2663,65 @@ class KrakenAPI(object):
 
         CallRateLimitError
             The call rate limiter blocked the query.
-
         """
-
         # create data dictionary
         data = {arg: value for arg, value in locals().items() if
                 arg != 'self' and value is not None}
 
         # query
-        res = self.api.query_private('Staking/Pending', data=data)
+        res = self.api.query_private('Earn/Allocations', data=data)
 
         # check for error
         if len(res['error']) > 0:
             raise KrakenAPIError(res['error'])
+        
+        items = pd.json_normalize(
+            res['result']['items']).set_index('strategy_id')
+        numeric_cols = [
+            x for x in items.columns if x.endswith(('native','converted'))]
+        items[numeric_cols] = items[numeric_cols].apply(pd.to_numeric)
+        
+        date_cols = ['payout.period_start', 'payout.period_end']
+        items[date_cols] = items[date_cols].apply(pd.to_datetime)
 
-        # create dataframe
-        try:
-            transactions = pd.json_normalize(
-                data=res['result']
-            ).set_index('refid')
-        except KeyError:
-            return None
+        return (
+            res['result']['converted_asset'],
+            float(res['result']['total_allocated']),
+            float(res['result']['total_rewarded']),
+            res['result']['next_cursor'],
+            items
+        )
 
-        return transactions
 
     @crl_sleep
     @callratelimiter('other')
-    def get_staking_transactions(self, otp=None):
-        """Returns the list of 1000 recent staking transactions from past
-        90 days.
-
-        Returns a ``pd.DataFrame`` of staking transactions.
+    def get_allocate_status(self, strategy_id=None, otp=None):
+        """Get the status of the last allocation request.
+        
+        (De)allocation operations are asynchronous and this endpoint allows
+        client to retrieve the status of the last dispatched operation. There
+        can be only one (de)allocation request in progress for given user and 
+        strategy.
+        The `pending` attribute in the response indicates if the previously
+        dispatched operation is still in progress (true) or has successfully 
+        completed (false). If the dispatched request failed with an error, then
+        HTTP error is returned to the client as if it belonged to the original 
+        request.
+        https://docs.kraken.com/rest/#tag/Earn/operation/getAllocateStrategyStatus
 
         Parameters
         ----------
+        strategy_id: str
+            ID of the earn strategy, call get_earn_strategies() to list availble 
+            strategies
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
-        transactions : pd.DataFrame
-            Table containing transaction refids and details.
-            index = refid
-            type = Type of transaction {'bonding', 'reward', 'unbonding'}
-            asset = Asset code/name
-            amount = The transaction amount
-            time = Unix timestamp when the transaction was initiated.
-            bond_start = Unix timestamp from the start of bond period
-            (applicable only to `bonding` transactions).
-            bond_end = Unix timestamp of the end of bond period
-            (applicable only to `bonding` transactions).
-            status = Transaction status {'Initial', 'Pending', 'Settled'
-            'Success', 'Failure'}
-
+        pending: bool
+            wether the allocation request is still in progress (true) or not
+        
         Raises
         ------
         HTTPError
@@ -2669,55 +2732,41 @@ class KrakenAPI(object):
 
         CallRateLimitError
             The call rate limiter blocked the query.
-
         """
-
         # create data dictionary
         data = {arg: value for arg, value in locals().items() if
                 arg != 'self' and value is not None}
 
         # query
-        res = self.api.query_private('Staking/Transactions', data=data)
+        res = self.api.query_private('Earn/AllocateStatus', data=data)
 
         # check for error
         if len(res['error']) > 0:
             raise KrakenAPIError(res['error'])
 
-        # create dataframe
-        try:
-            transactions = pd.json_normalize(
-                data=res['result']
-            ).set_index('refid')
-        except KeyError:
-            return None
-
-        return transactions
+        return res['result']['pending']
 
     @crl_sleep
     @callratelimiter('other')
-    def stake_asset(self, asset, amount, method, otp=None):
-        """Stake an asset from your spot wallet. This operation requires an
-        API key with `Withdraw funds` permission.
-
-        Returns a ``str`` of the transaction Reference ID.
+    def get_deallocate_status(self, strategy_id=None, otp=None):
+        """Get the status of the last deallocation request.
+        
+        See get_allocation_status for more details.
+        https://docs.kraken.com/rest/#tag/Earn/operation/getDeallocateStrategyStatus
 
         Parameters
         ----------
-        asset : str
-            Asset to stake (asset ID or `altname`)
-        amount : float
-            Amount of the asset to stake
-        method : str
-            Name of the staking option to use (refer to the Staking Assets
-            endpoint for the correct method names for each asset)
+        strategy_id: str
+            ID of the earn strategy, call get_earn_strategies() to list availble 
+            strategies
         otp : str
             Two-factor password (if two-factor enabled, otherwise not required)
 
         Returns
         -------
-        refid : str
-            Transaction Reference ID
-
+        pending: bool
+            wether the deallocation request is still in progress (true) or not
+        
         Raises
         ------
         HTTPError
@@ -2728,70 +2777,120 @@ class KrakenAPI(object):
 
         CallRateLimitError
             The call rate limiter blocked the query.
-
         """
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
 
+        # query
+        res = self.api.query_private('Earn/DeallocateStatus', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+        
+        return res['result']['pending']
+
+    @crl_sleep
+    @callratelimiter('other')
+    def allocate_earn_funds(self, amount=None, strategy_id=None, otp=None):
+        """Allocate funds to the Strategy.
+
+        Requires the Earn Funds API key permission. The amount must always be 
+        defined.
+        There can be only one (de)allocation request in progress for given user
+        and strategy at any time. 
+        
+        Parameters
+        ----------
+        strategy_id: str
+            ID of the earn strategy, call get_earn_strategies() to list availble 
+            strategies
+        amount: float | str
+            Amount to allocate to the strategy
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        Result: Literal[True, None]
+            Will return true when the operation is successful, null when an 
+            error occurred.
+        
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+        """
         # create data dictionary
         data = {arg: value for arg, value in locals().items() if
                 arg != 'self' and value is not None}
 
         # query
-        res = self.api.query_private('Stake', data=data)
+        res = self.api.query_private('Earn/Allocate', data=data)
 
         # check for error
         if len(res['error']) > 0:
             raise KrakenAPIError(res['error'])
+        
+        return res['result']
+        
 
+    @crl_sleep
+    @callratelimiter('other')
+    def deallocate_earn_funds(self, amount=None, strategy_id=None, otp=None):
+        """Dellocate funds from a Strategy.
+
+        Requires the Earn Funds API key permission. The amount must always be 
+        defined.
+        There can be only one (de)allocation request in progress for given user
+        and strategy at any time. 
+        
+        Parameters
+        ----------
+        strategy_id: str
+            ID of the earn strategy, call get_earn_strategies() to list availble 
+            strategies
+        amount: float | str
+            Amount to deallocate from a strategy
+        otp : str
+            Two-factor password (if two-factor enabled, otherwise not required)
+
+        Returns
+        -------
+        Result: Literal[True, None]
+            Will return true when the operation is successful, null when an 
+            error occurred.
+        
+        Raises
+        ------
+        HTTPError
+            An HTTP error occurred.
+
+        KrakenAPIError
+            A kraken.com API error occurred.
+
+        CallRateLimitError
+            The call rate limiter blocked the query.
+        """
+        # create data dictionary
+        data = {arg: value for arg, value in locals().items() if
+                arg != 'self' and value is not None}
+
+        # query
+        res = self.api.query_private('Earn/Deallocate', data=data)
+
+        # check for error
+        if len(res['error']) > 0:
+            raise KrakenAPIError(res['error'])
+        
         return res['result']
 
-    @crl_sleep
-    @callratelimiter('other')
-    def unstake_asset(self, asset, amount, otp=None):
-        """Unstake an asset from your staking wallet. This operation requires
-        an API key with `Withdraw funds` permission.
-
-        Returns a ``str`` of the transaction Reference ID.
-
-        Parameters
-        ----------
-        asset : str
-            Asset to unstake (asset ID or `altname`). Must be a valid staking
-            asset (e.g. XBT.M, XTZ.S, ADA.S)
-        amount : float
-            Amount of the asset to stake
-        otp : str
-            Two-factor password (if two-factor enabled, otherwise not required)
-
-        Returns
-        -------
-        refid : str
-            Transaction Reference ID
-
-        Raises
-        ------
-        HTTPError
-            An HTTP error occurred.
-
-        KrakenAPIError
-            A kraken.com API error occurred.
-
-        CallRateLimitError
-            The call rate limiter blocked the query.
-
-        """
-
-        # create data dictionary
-        data = {arg: value for arg, value in locals().items() if
-                arg != 'self' and value is not None}
-
-        # query
-        res = self.api.query_private('Unstake', data=data)
-
-        # check for error
-        if len(res['error']) > 0:
-            raise KrakenAPIError(res['error'])
-
-        return res['result']
 
     @crl_sleep
     @callratelimiter('other')
