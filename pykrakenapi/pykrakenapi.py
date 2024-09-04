@@ -763,10 +763,10 @@ class KrakenAPI(object):
             trades.columns = [
                 'price', 'volume', 'time', 'buy_sell', 'market_limit', 'misc', 'id'
             ]
-            trades.buy_sell.replace('b', 'buy', inplace=True)
-            trades.buy_sell.replace('s', 'sell', inplace=True)
-            trades.market_limit.replace('l', 'limit', inplace=True)
-            trades.market_limit.replace('m', 'market', inplace=True)
+            trades.replace({'buy_sell': 'b'}, 'buy', inplace=True)
+            trades.replace({'buy_sell': 's'}, 'sell', inplace=True)
+            trades.replace({'market_limit': 'l'}, 'limit', inplace=True)
+            trades.replace({'market_limit': 'm'}, 'market', inplace=True)
 
             # time
             trades['dtime'] = pd.to_datetime(trades.time, unit='s')
